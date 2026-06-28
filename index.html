@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kassenbuch">
+<title>🏕️ Camping Kassenbuch</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-dark: #1a3a1a; --green-mid: #2d6a2d; --green-light: #a8d5a2;
+    --green-pale: #e8f5e9; --green-soft: #f0f7f0; --green-faint: #f9fdf9;
+    --red: #c0392b; --orange: #e67e22; --blue: #2980b9;
+    --text: #1a3a1a; --text-muted: #556b55; --border: #c8dfc8;
+    --radius: 12px; --shadow: 0 2px 16px rgba(45,106,45,0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'DM Sans', sans-serif; background: linear-gradient(135deg,#e8f5e9 0%,#f9fdf9 60%,#e0f2e9 100%); min-height:100vh; color:var(--text); }
+  #app { display:flex; flex-direction:column; min-height:100vh; }
+  header { background:var(--green-dark); color:#fff; padding:16px 20px 12px; position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,0.3); }
+  header h1 { font-family:'Playfair Display',serif; font-size:20px; color:var(--green-light); margin-bottom:12px; }
+  nav { display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  nav::-webkit-scrollbar { display:none; }
+  .tab-btn { flex-shrink:0; background:rgba(255,255,255,0.08); border:none; color:#aaa; padding:8px 14px; border-radius:20px; font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+  .tab-btn.active { background:var(--green-light); color:var(--green-dark); font-weight:700; }
+  main { flex:1; padding:20px 16px 100px; max-width:900px; margin:0 auto; width:100%; }
+  .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .section-header h2 { font-family:'Playfair Display',serif; font-size:22px; color:var(--green-dark); }
+  .card { background:#fff; border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); margin-bottom:16px; }
+  .card h3 { font-family:'Playfair Display',serif; font-size:17px; color:var(--green-dark); margin-bottom:14px; }
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+  .stat-card { border-radius:var(--radius); padding:16px; box-shadow:0 1px 8px rgba(0,0,0,0.07); }
+  .stat-card .icon { font-size:26px; margin-bottom:6px; }
+  .stat-card .value { font-size:20px; font-weight:700; color:var(--green-dark); }
+  .stat-card .label { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+  .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { padding:10px 12px; text-align:left; color:var(--text-muted); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; background:var(--green-soft); border-bottom:2px solid var(--border); white-space:nowrap; }
+  td { padding:10px 12px; border-bottom:1px solid #f0f0f0; }
+  tr:last-child td { border-bottom:none; }
+  tr:nth-child(even) td { background:var(--green-faint); }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; white-space:nowrap; }
+  .badge-green { background:#d4edda; color:#155724; }
+  .badge-red   { background:#f8d7da; color:#721c24; }
+  .badge-blue  { background:#cce5ff; color:#004085; }
+  .badge-orange{ background:#fff3cd; color:#856404; }
+  .btn { padding:10px 20px; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer; border:none; font-family:'DM Sans',sans-serif; transition:opacity 0.2s; }
+  .btn:active { opacity:0.75; }
+  .btn-primary { background:var(--green-mid); color:#fff; }
+  .btn-danger  { background:var(--red); color:#fff; padding:5px 10px; font-size:12px; border-radius:8px; }
+  .btn-ghost   { background:transparent; color:var(--green-mid); border:1.5px solid var(--green-mid); }
+  .btn-sm      { padding:6px 14px; font-size:13px; }
+  .modal-overlay { display:none; position:fixed; inset:0; z-index:500; background:rgba(20,30,20,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:#fff; border-radius:18px; padding:28px 24px; width:90%; max-width:460px; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation:slideUp 0.25s ease; }
+  @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal h3 { font-family:'Playfair Display',serif; font-size:20px; color:var(--green-dark); margin-bottom:20px; }
+  .modal-close { position:absolute; top:14px; right:16px; background:none; border:none; font-size:22px; cursor:pointer; color:#888; line-height:1; }
+  .modal-close:hover { color:var(--green-dark); }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
+  .form-group { margin-bottom:14px; }
+  label { display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:4px; }
+  input, select { width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid var(--border); font-size:15px; background:var(--green-faint); font-family:'DM Sans',sans-serif; color:var(--text); outline:none; -webkit-appearance:none; }
+  input:focus, select:focus { border-color:var(--green-mid); }
+  .empty { text-align:center; padding:40px 20px; color:#999; }
+  .empty .emoji { font-size:48px; margin-bottom:10px; }
+  .empty p { font-size:15px; }
+  .vehicle-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+  .vehicle-card { background:#fff; border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); position:relative; }
+  .vehicle-card .v-icon { font-size:32px; margin-bottom:8px; }
+  .vehicle-card .v-name { font-weight:700; font-size:16px; }
+  .vehicle-card .v-type { font-size:13px; color:var(--text-muted); margin-bottom:10px; }
+  .vehicle-card .del-btn { position:absolute; top:10px; right:12px; background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; }
+  .bar-row { margin-bottom:10px; }
+  .bar-row .bar-label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; }
+  .bar-track { background:var(--green-pale); border-radius:4px; height:8px; }
+  .bar-fill  { background:var(--green-mid); border-radius:4px; height:8px; transition:width 0.5s; }
+  .summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
+  .summary-tile { border-radius:var(--radius); padding:14px 16px; }
+  .summary-tile .s-val { font-size:18px; font-weight:700; color:var(--green-dark); }
+  .summary-tile .s-lbl { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
+  .payment-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 14px; border-radius:10px; margin-bottom:8px; font-size:14px; }
+  .payment-row.owes { background:#fce4ec; }
+  .payment-row.gets { background:#e8f5e9; }
+
+  /* ── SYNC STATUS BAR ── */
+  #sync-bar { display:flex; align-items:center; gap:8px; padding:6px 20px; font-size:12px; font-weight:600; transition:all 0.3s; }
+  #sync-bar.ok     { background:#d4edda; color:#155724; }
+  #sync-bar.syncing{ background:#fff3cd; color:#856404; }
+  #sync-bar.error  { background:#f8d7da; color:#721c24; }
+  #sync-bar.setup  { background:#cce5ff; color:#004085; }
+  .sync-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .sync-dot.ok      { background:#28a745; }
+  .sync-dot.syncing { background:#ffc107; animation:pulse 1s infinite; }
+  .sync-dot.error   { background:#dc3545; }
+  .sync-dot.setup   { background:#007bff; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── SETUP SCREEN ── */
+  #setup-screen { display:none; position:fixed; inset:0; z-index:1000; background:linear-gradient(135deg,#e8f5e9,#f9fdf9); align-items:center; justify-content:center; }
+  #setup-screen.show { display:flex; }
+  .setup-box { background:#fff; border-radius:20px; padding:36px 32px; max-width:460px; width:90%; box-shadow:0 20px 60px rgba(45,106,45,0.15); }
+  .setup-box h2 { font-family:'Playfair Display',serif; font-size:24px; color:var(--green-dark); margin-bottom:8px; }
+  .setup-box p { font-size:14px; color:var(--text-muted); margin-bottom:20px; line-height:1.6; }
+  .setup-step { background:var(--green-pale); border-radius:10px; padding:12px 16px; margin-bottom:12px; font-size:13px; }
+  .setup-step strong { color:var(--green-dark); }
+  .setup-step code { background:#fff; padding:2px 6px; border-radius:4px; font-size:12px; font-family:monospace; }
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" class="show">
+  <div class="setup-box">
+    <h2>🏕️ Camping Kassenbuch</h2>
+    <p>Verbinde die App mit deiner Supabase-Datenbank für Cloud-Synchronisation mit allen Teilnehmern.</p>
+    <div class="setup-step">
+      <strong>1.</strong> Gehe auf <code>supabase.com</code> → kostenlosen Account anlegen
+    </div>
+    <div class="setup-step">
+      <strong>2.</strong> Neues Projekt erstellen → Region: <code>Europe (Frankfurt)</code>
+    </div>
+    <div class="setup-step">
+      <strong>3.</strong> <code>Settings → API</code> → URL und anon-Key kopieren
+    </div>
+    <div class="setup-step">
+      <strong>4.</strong> <code>SQL Editor</code> → Setup-Script aus der .sql-Datei ausführen
+    </div>
+    <div class="form-group" style="margin-top:20px">
+      <label>Supabase Project URL</label>
+      <input id="setup-url" placeholder="https://xxx.supabase.co" type="url">
+    </div>
+    <div class="form-group">
+      <label>Supabase anon Key</label>
+      <input id="setup-key" placeholder="eyJhbGci..." type="password">
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="saveConfig()">🔗 Verbinden</button>
+    <p id="setup-error" style="color:var(--red);font-size:13px;margin-top:10px;display:none"></p>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>🏕️ Camping Kassenbuch</h1>
+    <nav id="nav"></nav>
+  </header>
+  <div id="sync-bar" class="syncing">
+    <div class="sync-dot syncing" id="sync-dot"></div>
+    <span id="sync-text">Verbinde...</span>
+    <button onclick="openConfigModal()" style="margin-left:auto;background:none;border:none;font-size:11px;color:inherit;cursor:pointer;text-decoration:underline">⚙️ Einstellungen</button>
+  </div>
+  <main id="main"></main>
+</div>
+
+<div id="modal" class="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// SUPABASE CONFIG & CLIENT
+// ══════════════════════════════════════════════════════════
+let SUPA_URL = '';
+let SUPA_KEY = '';
+
+function loadConfig() {
+  SUPA_URL = localStorage.getItem('supa_url') || '';
+  SUPA_KEY = localStorage.getItem('supa_key') || '';
+  return SUPA_URL && SUPA_KEY;
+}
+
+function saveConfig() {
+  const url = document.getElementById('setup-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('setup-key').value.trim();
+  if (!url || !key) { showSetupError('Bitte beide Felder ausfüllen.'); return; }
+  if (!url.startsWith('https://')) { showSetupError('URL muss mit https:// beginnen.'); return; }
+  localStorage.setItem('supa_url', url);
+  localStorage.setItem('supa_key', key);
+  SUPA_URL = url; SUPA_KEY = key;
+  document.getElementById('setup-screen').classList.remove('show');
+  initApp();
+}
+
+function showSetupError(msg) {
+  const el = document.getElementById('setup-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// ── Supabase REST calls ───────────────────────────────────
+async function sbGet(table, query='') {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}&order=id.asc`, {
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' }
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function sbInsert(table, data) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function sbDelete(table, id) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+  });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+async function sbUpdate(table, id, data) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function sbUpsert(table, data, onConflict='key') {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method: 'POST',
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation,resolution=merge-duplicates' },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ══════════════════════════════════════════════════════════
+// STATE (immer aus DB geladen)
+// ══════════════════════════════════════════════════════════
+let state = {
+  teilnehmer: [], fahrzeuge: [], einzahlungen: [],
+  kassenbuch: [], einkaufe: [],
+  einstellungen: { campingKostenProPersonTag:0, stromPreisKwh:0, stromVerbrauchKwh:0, duschkartenGesamtkosten:0 }
+};
+
+function setSyncStatus(status, text) {
+  const bar = document.getElementById('sync-bar');
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  bar.className = status; dot.className = `sync-dot ${status}`; txt.textContent = text;
+}
+
+async function loadAll() {
+  setSyncStatus('syncing', 'Lade Daten...');
+  try {
+    const [tn, fz, ez, kb, ek, es] = await Promise.all([
+      sbGet('teilnehmer'),
+      sbGet('fahrzeuge'),
+      sbGet('einzahlungen'),
+      sbGet('kassenbuch'),
+      sbGet('einkaufe'),
+      sbGet('einstellungen'),
+    ]);
+    state.teilnehmer   = tn;
+    state.fahrzeuge    = fz;
+    state.einzahlungen = ez;
+    state.kassenbuch   = kb;
+    state.einkaufe     = ek;
+    // Einstellungen als key/value → Objekt
+    es.forEach(e => {
+      if (e.key in state.einstellungen) state.einstellungen[e.key] = e.value;
+    });
+    setSyncStatus('ok', `Synchronisiert · ${new Date().toLocaleTimeString('de')}`);
+    renderMain();
+  } catch(err) {
+    setSyncStatus('error', 'Fehler: ' + err.message);
+  }
+}
+
+// Auto-Refresh alle 30 Sekunden
+let refreshTimer = null;
+function startAutoRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => { if (currentTab !== 'einstellungen') loadAll(); }, 30000);
+}
+
+// ══════════════════════════════════════════════════════════
+// TABS & NAVIGATION
+// ══════════════════════════════════════════════════════════
+const KATEGORIEN = ['Lebensmittel','Getränke','Aktivitäten','Transport','Hygiene','Diverses'];
+const TABS = [
+  {id:'dashboard',    label:'📊 Dashboard'},
+  {id:'teilnehmer',   label:'👥 Teilnehmer'},
+  {id:'fahrzeuge',    label:'🚗 Fahrzeuge'},
+  {id:'einzahlungen', label:'💰 Einzahlungen'},
+  {id:'kassenbuch',   label:'📒 Kassenbuch'},
+  {id:'einkaufe',     label:'🛒 Einkäufe'},
+  {id:'abrechnung',   label:'📋 Abrechnung'},
+  {id:'einstellungen',label:'⚙️ Einstellungen'},
+];
+let currentTab = 'dashboard';
+
+function renderNav() {
+  document.getElementById('nav').innerHTML = TABS.map(t =>
+    `<button class="tab-btn${t.id===currentTab?' active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`
+  ).join('');
+}
+function switchTab(id) {
+  currentTab = id;
+  renderNav();
+  renderMain();
+  // Refresh wenn Tab gewechselt (außer Einstellungen)
+  if (id !== 'einstellungen') loadAll();
+}
+
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
+function fmt(v) { return (Number(v)||0).toFixed(2).replace('.',',') + ' €'; }
+function badge(text, color='green') { return `<span class="badge badge-${color}">${text}</span>`; }
+function today() { return new Date().toISOString().slice(0,10); }
+
+// ── MODAL ──────────────────────────────────────────────────
+function openModal(title, html) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) closeModal(); });
+
+// ── RENDER MAIN ────────────────────────────────────────────
+function renderMain() {
+  const m = document.getElementById('main');
+  if (currentTab==='dashboard')    m.innerHTML = renderDashboard();
+  if (currentTab==='teilnehmer')   m.innerHTML = renderTeilnehmer();
+  if (currentTab==='fahrzeuge')    m.innerHTML = renderFahrzeuge();
+  if (currentTab==='einzahlungen') m.innerHTML = renderEinzahlungen();
+  if (currentTab==='kassenbuch')   m.innerHTML = renderKassenbuch();
+  if (currentTab==='einkaufe')     m.innerHTML = renderEinkaufe();
+  if (currentTab==='abrechnung')   m.innerHTML = renderAbrechnung();
+  if (currentTab==='einstellungen')m.innerHTML = renderEinstellungen();
+}
+
+// ══════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════
+function renderDashboard() {
+  const totalEin = state.einzahlungen.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalAus = state.kassenbuch.reduce((s,e)=>s+Number(e.betrag),0)
+                 + state.einkaufe.reduce((s,e)=>s+Number(e.betrag),0);
+  const kasse = totalEin - totalAus;
+  const ptage = state.teilnehmer.reduce((s,t)=>s+(Number(t.tage)||0),0);
+
+  const cards = [
+    {icon:'👥', val:state.teilnehmer.length, lbl:'Teilnehmer', bg:'#e8f5e9'},
+    {icon:'📅', val:ptage, lbl:'Personentage', bg:'#e3f2fd'},
+    {icon:'💚', val:fmt(totalEin), lbl:'Einzahlungen', bg:'#e8f5e9'},
+    {icon:'💸', val:fmt(totalAus), lbl:'Ausgaben', bg:'#fce4ec'},
+    {icon:kasse>=0?'✅':'⚠️', val:fmt(kasse), lbl:'Kassenstand', bg:kasse>=0?'#e8f5e9':'#fff3e0'},
+  ];
+
+  const allTx = [
+    ...state.kassenbuch.map(e=>({kat:e.kategorie||'Diverses',b:Number(e.betrag)})),
+    ...state.einkaufe.map(e=>({kat:e.kategorie||'Diverses',b:Number(e.betrag)})),
+  ];
+  const byKat = {};
+  allTx.forEach(t=>{ byKat[t.kat]=(byKat[t.kat]||0)+t.b; });
+  const entries = Object.entries(byKat).sort((a,b)=>b[1]-a[1]);
+
+  const chartHTML = entries.length===0 ? '' : `
+    <div class="card">
+      <h3>Ausgaben nach Kategorie</h3>
+      ${entries.map(([k,v])=>`
+        <div class="bar-row">
+          <div class="bar-label"><span>${k}</span><span>${fmt(v)}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,(v/totalAus)*100)}%"></div></div>
+        </div>`).join('')}
+    </div>`;
+
+  const emptyHTML = state.teilnehmer.length===0 && state.kassenbuch.length===0
+    ? `<div class="card empty"><div class="emoji">🏕️</div><p>Willkommen! Füge zuerst Teilnehmer hinzu.</p></div>` : '';
+
+  return `<div class="stats-grid">${cards.map(c=>`
+    <div class="stat-card" style="background:${c.bg}">
+      <div class="icon">${c.icon}</div>
+      <div class="value">${c.val}</div>
+      <div class="label">${c.lbl}</div>
+    </div>`).join('')}</div>${chartHTML}${emptyHTML}`;
+}
+
+// ══════════════════════════════════════════════════════════
+// TEILNEHMER
+// ══════════════════════════════════════════════════════════
+function renderTeilnehmer() {
+  const rows = state.teilnehmer.map(t=>`
+    <tr>
+      <td><strong>${t.name}</strong></td>
+      <td>${t.anreise||'–'}</td><td>${t.abreise||'–'}</td>
+      <td>${badge(t.tage+' T','blue')}</td>
+      <td>${t.fahrzeughalter||'–'}</td><td>${t.kennzeichen||'–'}</td><td>${t.kontakt||'–'}</td>
+      <td><button class="btn btn-danger" onclick="delTeilnehmer(${t.id})">✕</button></td>
+    </tr>`).join('');
+  return `
+    <div class="section-header">
+      <h2>👥 Teilnehmer</h2>
+      <button class="btn btn-primary" onclick="modalTeilnehmer()">+ Hinzufügen</button>
+    </div>
+    ${state.teilnehmer.length===0
+      ? `<div class="card empty"><div class="emoji">👤</div><p>Noch keine Teilnehmer</p></div>`
+      : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+           <thead><tr>${['Name','Anreise','Abreise','Tage','Fahrzeughalter','Kennzeichen','Kontakt',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+           <tbody>${rows}</tbody></table></div></div>`}`;
+}
+
+function modalTeilnehmer() {
+  openModal('Neuer Teilnehmer', `
+    <div class="form-group"><label>Name *</label><input id="f-name" placeholder="Max Mustermann"></div>
+    <div class="form-group"><label>Anreise</label><input id="f-an" type="date" value="${today()}"></div>
+    <div class="form-group"><label>Abreise</label><input id="f-ab" type="date"></div>
+    <div class="form-group"><label>Tage (oder automatisch)</label><input id="f-tage" type="number" placeholder="z.B. 5"></div>
+    <div class="form-group"><label>Fahrzeughalter</label><input id="f-fzh"></div>
+    <div class="form-group"><label>Kennzeichen</label><input id="f-kz"></div>
+    <div class="form-group"><label>Kontakt</label><input id="f-ko"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveTeilnehmer()">Speichern</button>
+    </div>`);
+  document.getElementById('f-ab').addEventListener('change', () => {
+    const an=document.getElementById('f-an').value, ab=document.getElementById('f-ab').value;
+    if (an && ab) { const d=Math.round((new Date(ab)-new Date(an))/86400000); if(d>0) document.getElementById('f-tage').value=d; }
+  });
+}
+
+async function saveTeilnehmer() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('Bitte Name eingeben'); return; }
+  setSyncStatus('syncing','Speichere...');
+  try {
+    await sbInsert('teilnehmer', {
+      name, anreise:document.getElementById('f-an').value,
+      abreise:document.getElementById('f-ab').value,
+      tage:Number(document.getElementById('f-tage').value)||0,
+      fahrzeughalter:document.getElementById('f-fzh').value,
+      kennzeichen:document.getElementById('f-kz').value,
+      kontakt:document.getElementById('f-ko').value,
+    });
+    closeModal(); await loadAll();
+  } catch(e) { setSyncStatus('error','Fehler: '+e.message); }
+}
+
+async function delTeilnehmer(id) {
+  if(!confirm('Teilnehmer löschen?')) return;
+  setSyncStatus('syncing','Lösche...');
+  try { await sbDelete('teilnehmer', id); await loadAll(); } catch(e) { setSyncStatus('error',e.message); }
+}
+
+// ══════════════════════════════════════════════════════════
+// FAHRZEUGE
+// ══════════════════════════════════════════════════════════
+function renderFahrzeuge() {
+  const cards = state.fahrzeuge.map(f=>`
+    <div class="vehicle-card">
+      <button class="del-btn" onclick="delFahrzeug(${f.id})">✕</button>
+      <div class="v-icon">🚗</div>
+      <div class="v-name">${f.halter}</div>
+      <div class="v-type">${f.typ||'–'}</div>
+      ${badge(fmt(f.kosten),'orange')}
+    </div>`).join('');
+  return `
+    <div class="section-header">
+      <h2>🚗 Fahrzeuge</h2>
+      <button class="btn btn-primary" onclick="modalFahrzeug()">+ Hinzufügen</button>
+    </div>
+    ${state.fahrzeuge.length===0
+      ? `<div class="card empty"><div class="emoji">🚗</div><p>Keine Fahrzeuge</p></div>`
+      : `<div class="vehicle-grid">${cards}</div>`}`;
+}
+
+function modalFahrzeug() {
+  openModal('Neues Fahrzeug', `
+    <div class="form-group"><label>Fahrzeughalter *</label><input id="fv-h"></div>
+    <div class="form-group"><label>Typ</label><input id="fv-t" placeholder="PKW, Wohnmobil..."></div>
+    <div class="form-group"><label>Kosten (€)</label><input id="fv-k" type="number" step="0.01"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveFahrzeug()">Speichern</button>
+    </div>`);
+}
+async function saveFahrzeug() {
+  const halter = document.getElementById('fv-h').value.trim();
+  if (!halter) { alert('Bitte Halter eingeben'); return; }
+  setSyncStatus('syncing','Speichere...');
+  try {
+    await sbInsert('fahrzeuge', {halter, typ:document.getElementById('fv-t').value, kosten:Number(document.getElementById('fv-k').value)||0});
+    closeModal(); await loadAll();
+  } catch(e) { setSyncStatus('error',e.message); }
+}
+async function delFahrzeug(id) {
+  if(!confirm('Fahrzeug löschen?')) return;
+  setSyncStatus('syncing','Lösche...');
+  try { await sbDelete('fahrzeuge',id); await loadAll(); } catch(e) { setSyncStatus('error',e.message); }
+}
+
+// ══════════════════════════════════════════════════════════
+// EINZAHLUNGEN
+// ══════════════════════════════════════════════════════════
+function renderEinzahlungen() {
+  const total = state.einzahlungen.reduce((s,e)=>s+Number(e.betrag),0);
+  const rows = state.einzahlungen.map(e=>`
+    <tr>
+      <td><strong>${e.teilnehmer}</strong></td><td>${e.datum}</td>
+      <td>${badge(fmt(e.betrag),'green')}</td>
+      <td><button class="btn btn-danger" onclick="delEin(${e.id})">✕</button></td>
+    </tr>`).join('');
+  return `
+    <div class="section-header">
+      <h2>💰 Einzahlungen</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${badge('Gesamt: '+fmt(total),'green')}
+        <button class="btn btn-primary btn-sm" onclick="modalEin()">+ Eintragen</button>
+      </div>
+    </div>
+    ${state.einzahlungen.length===0
+      ? `<div class="card empty"><div class="emoji">💰</div><p>Noch keine Einzahlungen</p></div>`
+      : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+           <thead><tr>${['Teilnehmer','Datum','Betrag',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+           <tbody>${rows}</tbody></table></div></div>`}`;
+}
+function modalEin() {
+  const opts = state.teilnehmer.map(t=>`<option>${t.name}</option>`).join('');
+  openModal('Einzahlung eintragen', `
+    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option>${opts}</select></div>
+    <div class="form-group"><label>Datum</label><input id="ei-d" type="date" value="${today()}"></div>
+    <div class="form-group"><label>Betrag (€) *</label><input id="ei-b" type="number" step="0.01"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveEin()">Speichern</button>
+    </div>`);
+}
+async function saveEin() {
+  const t=document.getElementById('ei-t').value, b=document.getElementById('ei-b').value;
+  if(!t||!b){alert('Pflichtfelder ausfüllen');return;}
+  setSyncStatus('syncing','Speichere...');
+  try {
+    await sbInsert('einzahlungen',{teilnehmer:t, datum:document.getElementById('ei-d').value, betrag:Number(b)});
+    closeModal(); await loadAll();
+  } catch(e){setSyncStatus('error',e.message);}
+}
+async function delEin(id){
+  if(!confirm('Löschen?'))return;
+  setSyncStatus('syncing','Lösche...');
+  try{await sbDelete('einzahlungen',id);await loadAll();}catch(e){setSyncStatus('error',e.message);}
+}
+
+// ══════════════════════════════════════════════════════════
+// KASSENBUCH
+// ══════════════════════════════════════════════════════════
+function renderKassenbuch() {
+  const total = state.kassenbuch.reduce((s,e)=>s+Number(e.betrag),0);
+  const rows = state.kassenbuch.map(e=>`
+    <tr>
+      <td>${e.datum}</td>
+      <td>${badge(e.typ,e.typ==='Einnahme'?'green':'red')}</td>
+      <td>${e.kategorie||'–'}</td><td>${e.beschreibung||'–'}</td>
+      <td><strong>${fmt(e.betrag)}</strong></td>
+      <td>${e.bezahlt_von||'–'}</td>
+      <td><button class="btn btn-danger" onclick="delKb(${e.id})">✕</button></td>
+    </tr>`).join('');
+  return `
+    <div class="section-header">
+      <h2>📒 Kassenbuch</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${badge('Ausgaben: '+fmt(total),'red')}
+        <button class="btn btn-primary btn-sm" onclick="modalKb()">+ Eintrag</button>
+      </div>
+    </div>
+    ${state.kassenbuch.length===0
+      ? `<div class="card empty"><div class="emoji">📒</div><p>Kein Eintrag vorhanden</p></div>`
+      : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+           <thead><tr>${['Datum','Typ','Kategorie','Beschreibung','Betrag','Bezahlt von',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+           <tbody>${rows}</tbody></table></div></div>`}`;
+}
+function modalKb() {
+  const katOpts=KATEGORIEN.map(k=>`<option>${k}</option>`).join('');
+  const tnOpts=state.teilnehmer.map(t=>`<option>${t.name}</option>`).join('');
+  openModal('Kassenbucheintrag',`
+    <div class="form-group"><label>Datum</label><input id="kb-d" type="date" value="${today()}"></div>
+    <div class="form-group"><label>Typ</label><select id="kb-typ"><option>Ausgabe</option><option>Einnahme</option></select></div>
+    <div class="form-group"><label>Kategorie</label><select id="kb-kat"><option value="">– auswählen –</option>${katOpts}</select></div>
+    <div class="form-group"><label>Beschreibung</label><input id="kb-desc"></div>
+    <div class="form-group"><label>Betrag (€) *</label><input id="kb-b" type="number" step="0.01"></div>
+    <div class="form-group"><label>Bezahlt von</label><select id="kb-von"><option value="">– auswählen –</option>${tnOpts}</select></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveKb()">Speichern</button>
+    </div>`);
+}
+async function saveKb(){
+  const b=document.getElementById('kb-b').value;
+  if(!b){alert('Betrag eingeben');return;}
+  setSyncStatus('syncing','Speichere...');
+  try{
+    await sbInsert('kassenbuch',{
+      datum:document.getElementById('kb-d').value,
+      typ:document.getElementById('kb-typ').value,
+      kategorie:document.getElementById('kb-kat').value,
+      beschreibung:document.getElementById('kb-desc').value,
+      betrag:Number(b),
+      bezahlt_von:document.getElementById('kb-von').value,
+    });
+    closeModal(); await loadAll();
+  }catch(e){setSyncStatus('error',e.message);}
+}
+async function delKb(id){
+  if(!confirm('Löschen?'))return;
+  setSyncStatus('syncing','Lösche...');
+  try{await sbDelete('kassenbuch',id);await loadAll();}catch(e){setSyncStatus('error',e.message);}
+}
+
+// ══════════════════════════════════════════════════════════
+// EINKÄUFE
+// ══════════════════════════════════════════════════════════
+function renderEinkaufe() {
+  const total = state.einkaufe.reduce((s,e)=>s+Number(e.betrag),0);
+  const rows = state.einkaufe.map(e=>`
+    <tr>
+      <td>${e.datum}</td><td><strong>${e.markt||'–'}</strong></td>
+      <td>${e.kategorie||'–'}</td>
+      <td>${badge(fmt(e.betrag),'orange')}</td>
+      <td>${e.bezahlt_von||'–'}</td>
+      <td><button class="btn btn-danger" onclick="delEk(${e.id})">✕</button></td>
+    </tr>`).join('');
+  return `
+    <div class="section-header">
+      <h2>🛒 Einkäufe</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${badge('Gesamt: '+fmt(total),'red')}
+        <button class="btn btn-primary btn-sm" onclick="modalEk()">+ Einkauf</button>
+      </div>
+    </div>
+    ${state.einkaufe.length===0
+      ? `<div class="card empty"><div class="emoji">🛒</div><p>Noch keine Einkäufe</p></div>`
+      : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+           <thead><tr>${['Datum','Markt','Kategorie','Betrag','Bezahlt von',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+           <tbody>${rows}</tbody></table></div></div>`}`;
+}
+function modalEk(){
+  const katOpts=KATEGORIEN.map(k=>`<option>${k}</option>`).join('');
+  const tnOpts=state.teilnehmer.map(t=>`<option>${t.name}</option>`).join('');
+  openModal('Einkauf eintragen',`
+    <div class="form-group"><label>Datum</label><input id="ek-d" type="date" value="${today()}"></div>
+    <div class="form-group"><label>Markt / Laden</label><input id="ek-m" placeholder="z.B. Lidl"></div>
+    <div class="form-group"><label>Kategorie</label><select id="ek-kat"><option value="">– auswählen –</option>${katOpts}</select></div>
+    <div class="form-group"><label>Betrag (€) *</label><input id="ek-b" type="number" step="0.01"></div>
+    <div class="form-group"><label>Bezahlt von</label><select id="ek-von"><option value="">– auswählen –</option>${tnOpts}</select></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveEk()">Speichern</button>
+    </div>`);
+}
+async function saveEk(){
+  const b=document.getElementById('ek-b').value;
+  if(!b){alert('Betrag eingeben');return;}
+  setSyncStatus('syncing','Speichere...');
+  try{
+    await sbInsert('einkaufe',{
+      datum:document.getElementById('ek-d').value,
+      markt:document.getElementById('ek-m').value,
+      kategorie:document.getElementById('ek-kat').value,
+      betrag:Number(b),
+      bezahlt_von:document.getElementById('ek-von').value,
+    });
+    closeModal(); await loadAll();
+  }catch(e){setSyncStatus('error',e.message);}
+}
+async function delEk(id){
+  if(!confirm('Löschen?'))return;
+  setSyncStatus('syncing','Lösche...');
+  try{await sbDelete('einkaufe',id);await loadAll();}catch(e){setSyncStatus('error',e.message);}
+}
+
+// ══════════════════════════════════════════════════════════
+// EINSTELLUNGEN
+// ══════════════════════════════════════════════════════════
+function renderEinstellungen() {
+  const e = state.einstellungen;
+  const ptage = state.teilnehmer.reduce((s,t)=>s+(Number(t.tage)||0),0);
+  const totalStrom   = Number(e.stromPreisKwh) * Number(e.stromVerbrauchKwh);
+  const totalCamping = Number(e.campingKostenProPersonTag) * ptage;
+  const totalDusch   = Number(e.duschkartenGesamtkosten) || 0;
+  const duschKptag   = ptage > 0 ? totalDusch / ptage : 0;
+
+  return `
+    <div class="section-header"><h2>⚙️ Einstellungen</h2></div>
+
+    <div class="card">
+      <h3>🏕️ Campingplatz-Kosten</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Kosten pro Person und Tag, anteilig nach Anwesenheitstagen.</p>
+      <div class="form-group"><label>Preis pro Person/Tag (€)</label>
+        <input type="number" step="0.01" placeholder="z.B. 8.50" value="${e.campingKostenProPersonTag||''}"
+          onchange="saveEinstellung('campingKostenProPersonTag',this.value)">
+      </div>
+      <div style="background:var(--green-pale);border-radius:10px;padding:12px 16px">
+        <div style="font-size:13px;color:var(--text-muted)">Gesamtkosten Camping (${ptage} Personentage)</div>
+        <div style="font-size:20px;font-weight:700;color:var(--green-dark)">${fmt(totalCamping)}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>⚡ Stromkosten</h3>
+      <div class="form-group"><label>Strompreis pro kWh (€)</label>
+        <input type="number" step="0.001" placeholder="z.B. 0.35" value="${e.stromPreisKwh||''}"
+          onchange="saveEinstellung('stromPreisKwh',this.value)">
+      </div>
+      <div class="form-group"><label>Gesamtverbrauch (kWh)</label>
+        <input type="number" step="0.1" placeholder="z.B. 45" value="${e.stromVerbrauchKwh||''}"
+          onchange="saveEinstellung('stromVerbrauchKwh',this.value)">
+      </div>
+      <div style="background:#fff9e6;border-radius:10px;padding:12px 16px">
+        <div style="font-size:13px;color:var(--text-muted)">Gesamtstromkosten</div>
+        <div style="font-size:20px;font-weight:700;color:#856404">${fmt(totalStrom)}</div>
+        ${ptage>0?`<div style="font-size:12px;color:var(--text-muted)">= ${fmt(totalStrom/ptage)} pro Personentag</div>`:''}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🚿 Duschkarten</h3>
+      <div class="form-group"><label>Gesamtkosten Duschkarten (€)</label>
+        <input type="number" step="0.01" placeholder="z.B. 30.00" value="${e.duschkartenGesamtkosten||''}"
+          onchange="saveEinstellung('duschkartenGesamtkosten',this.value)">
+      </div>
+      <div style="background:#e3f2fd;border-radius:10px;padding:12px 16px">
+        <div style="font-size:13px;color:#004085">Gesamtkosten Duschkarten</div>
+        <div style="font-size:20px;font-weight:700;color:#004085">${fmt(totalDusch)}</div>
+        ${ptage>0?`<div style="font-size:12px;color:#004085">= ${fmt(duschKptag)} pro Personentag</div>`:''}
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--green-pale)">
+      <h3>📊 Übersicht Zusatzkosten</h3>
+      <table style="width:100%;font-size:14px">
+        <tr><td style="padding:6px 0;color:var(--text-muted)">Camping-Kosten</td><td style="text-align:right;font-weight:600">${fmt(totalCamping)}</td></tr>
+        <tr><td style="padding:6px 0;color:var(--text-muted)">Strom-Kosten</td><td style="text-align:right;font-weight:600">${fmt(totalStrom)}</td></tr>
+        <tr><td style="padding:6px 0;color:var(--text-muted)">Duschkarten</td><td style="text-align:right;font-weight:600">${fmt(totalDusch)}</td></tr>
+        <tr style="border-top:2px solid var(--border)">
+          <td style="padding:8px 0 0;font-weight:700">Summe Zusatzkosten</td>
+          <td style="text-align:right;font-weight:700;font-size:16px;padding-top:8px">${fmt(totalCamping+totalStrom+totalDusch)}</td>
+        </tr>
+      </table>
+    </div>`;
+}
+
+async function saveEinstellung(key, value) {
+  setSyncStatus('syncing','Speichere...');
+  try {
+    await sbUpsert('einstellungen', {key, value: String(value)}, 'key');
+    state.einstellungen[key] = value;
+    setSyncStatus('ok',`Gespeichert · ${new Date().toLocaleTimeString('de')}`);
+    renderMain();
+  } catch(e) { setSyncStatus('error',e.message); }
+}
+
+// ══════════════════════════════════════════════════════════
+// ABRECHNUNG
+// ══════════════════════════════════════════════════════════
+function renderAbrechnung() {
+  const totalAus = state.kassenbuch.reduce((s,e)=>s+Number(e.betrag),0)
+                 + state.einkaufe.reduce((s,e)=>s+Number(e.betrag),0);
+  const fzKosten  = state.fahrzeuge.reduce((s,f)=>s+Number(f.kosten||0),0);
+  const gemKosten = totalAus - fzKosten;
+  const ptage     = state.teilnehmer.reduce((s,t)=>s+(Number(t.tage)||0),0);
+  const kpt       = ptage>0 ? gemKosten/ptage : 0;
+
+  const es = state.einstellungen;
+  const campingKptag = Number(es.campingKostenProPersonTag)||0;
+  const totalStrom   = (Number(es.stromPreisKwh)||0)*(Number(es.stromVerbrauchKwh)||0);
+  const stromKptag   = ptage>0 ? totalStrom/ptage : 0;
+  const totalDusch   = Number(es.duschkartenGesamtkosten)||0;
+  const duschKptag   = ptage>0 ? totalDusch/ptage : 0;
+  const gesamtGesamt = totalAus + campingKptag*ptage + totalStrom + totalDusch;
+
+  const tiles = [
+    {val:fmt(totalAus),             lbl:'Ausgaben (Kasse)',     bg:'#fce4ec'},
+    {val:fmt(campingKptag*ptage),   lbl:'Campingplatz-Kosten', bg:'#fff3e0'},
+    {val:fmt(totalStrom),           lbl:'Stromkosten',          bg:'#fff9e6'},
+    {val:fmt(totalDusch),           lbl:'Duschkarten',          bg:'#e3f2fd'},
+    {val:fmt(gesamtGesamt),         lbl:'Gesamtkosten',         bg:'#e8f5e9'},
+    {val:fmt(kpt+campingKptag+stromKptag+duschKptag), lbl:'Kosten/Tag/Person', bg:'#f3e5f5'},
+    {val:ptage,                     lbl:'Personentage',         bg:'#e0f2e9'},
+  ];
+
+  const abr = state.teilnehmer.map(t => {
+    const tage = Number(t.tage)||0;
+    const eingezahlt = state.einzahlungen
+      .filter(e=>e.teilnehmer===t.name).reduce((s,e)=>s+Number(e.betrag),0);
+    const fzk      = state.fahrzeuge
+      .filter(f=>f.halter===t.fahrzeughalter||f.halter===t.name)
+      .reduce((s,f)=>s+Number(f.kosten||0),0);
+    const gk       = tage*kpt;
+    const campingK = tage*campingKptag;
+    const stromK   = tage*stromKptag;
+    const duschK   = tage*duschKptag;
+    const soll     = gk+fzk+campingK+stromK+duschK;
+    const saldo    = eingezahlt-soll;
+    return {name:t.name, tage, gk, fzk, campingK, stromK, duschK, soll, eingezahlt, saldo};
+  });
+
+  const tableRows = abr.map(a=>`
+    <tr>
+      <td><strong>${a.name}</strong></td>
+      <td>${a.tage}</td><td>${fmt(a.gk)}</td><td>${fmt(a.fzk)}</td>
+      <td>${fmt(a.campingK)}</td><td>${fmt(a.stromK)}</td><td>${fmt(a.duschK)}</td>
+      <td><strong>${fmt(a.soll)}</strong></td><td>${fmt(a.eingezahlt)}</td>
+      <td>${badge((a.saldo>=0?'+':'')+fmt(a.saldo),a.saldo>=0?'green':'red')}</td>
+    </tr>`).join('');
+
+  const owes = abr.filter(a=>a.saldo<-0.01);
+  const gets = abr.filter(a=>a.saldo>0.01);
+  const payHTML = owes.length===0
+    ? `<div style="color:var(--green-mid);font-weight:600;padding:10px">✅ Alle Konten sind ausgeglichen!</div>`
+    : owes.map(a=>`<div class="payment-row owes"><strong>${a.name}</strong> muss noch ${badge(fmt(Math.abs(a.saldo)),'red')} zahlen</div>`).join('')
+    + gets.map(a=>`<div class="payment-row gets"><strong>${a.name}</strong> bekommt zurück: ${badge(fmt(a.saldo),'green')}</div>`).join('');
+
+  const hinweis = (campingKptag===0&&totalStrom===0&&totalDusch===0)
+    ? `<div style="background:#fff9e6;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#856404">
+        💡 Camping, Strom und Duschkarten noch nicht eingetragen –
+        <button onclick="switchTab('einstellungen')" style="background:none;border:none;color:var(--green-mid);font-weight:700;cursor:pointer;font-size:13px;text-decoration:underline">Jetzt eintragen →</button>
+       </div>` : '';
+
+  return `
+    <h2 style="font-family:'Playfair Display',serif;color:var(--green-dark);margin-bottom:18px">📋 Abrechnung</h2>
+    ${hinweis}
+    <div class="summary-grid">${tiles.map(t=>`<div class="summary-tile" style="background:${t.bg}"><div class="s-val">${t.val}</div><div class="s-lbl">${t.lbl}</div></div>`).join('')}</div>
+    ${abr.length===0
+      ? `<div class="card empty"><p>Füge Teilnehmer hinzu.</p></div>`
+      : `<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+           <div style="padding:16px 18px 0"><h3>Individuelle Abrechnung</h3></div>
+           <div class="table-wrap"><table>
+             <thead><tr>${['Name','Tage','Gemeinschaft','Fahrzeug','Camping','Strom','Dusche','Gesamtsoll','Eingezahlt','Saldo'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+             <tbody>${tableRows}</tbody>
+           </table></div>
+         </div>
+         <div class="card"><h3>💸 Zahlungsausgleich</h3>${payHTML}</div>`}`;
+}
+
+// ══════════════════════════════════════════════════════════
+// CONFIG MODAL (Supabase-Zugangsdaten ändern)
+// ══════════════════════════════════════════════════════════
+function openConfigModal() {
+  openModal('⚙️ Supabase-Verbindung', `
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Zugangsdaten ändern oder neu verbinden.</p>
+    <div class="form-group"><label>Supabase URL</label>
+      <input id="cfg-url" value="${SUPA_URL}" type="url">
+    </div>
+    <div class="form-group"><label>Supabase anon Key</label>
+      <input id="cfg-key" value="${SUPA_KEY}" type="password">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="updateConfig()">Verbinden</button>
+    </div>`);
+}
+function updateConfig() {
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/,'');
+  const key = document.getElementById('cfg-key').value.trim();
+  if(!url||!key){alert('Beide Felder ausfüllen');return;}
+  localStorage.setItem('supa_url',url);
+  localStorage.setItem('supa_key',key);
+  SUPA_URL=url; SUPA_KEY=key;
+  closeModal(); loadAll();
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+async function initApp() {
+  renderNav();
+  renderMain();
+  await loadAll();
+  startAutoRefresh();
+}
+
+if (loadConfig()) {
+  document.getElementById('setup-screen').classList.remove('show');
+  initApp();
+}
+</script>
+</body>
+</html>
