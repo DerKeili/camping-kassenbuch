@@ -245,7 +245,8 @@ async function sbUpsert(table, data, onConflict='key') {
 let state = {
   teilnehmer: [], fahrzeuge: [], einzahlungen: [],
   kassenbuch: [], einkaufe: [],
-  einstellungen: { campingKostenProPersonTag:0, stromPreisKwh:0, stromVerbrauchKwh:0, duschkartenGesamtkosten:0 }
+  einstellungen: { campingKostenProPersonTag:0, stromPreisKwh:0, stromVerbrauchKwh:0, duschkartenGesamtkosten:0,
+    standplatzGebuehrProTag:0, standplatzAnzahl:1, standplatzRabattProzent:0 }
 };
 
 function setSyncStatus(status, text) {
@@ -404,7 +405,10 @@ function renderTeilnehmer() {
       <td>${t.anreise||'–'}</td><td>${t.abreise||'–'}</td>
       <td>${badge(t.tage+' T','blue')}</td>
       <td>${t.fahrzeughalter||'–'}</td><td>${t.kennzeichen||'–'}</td><td>${t.kontakt||'–'}</td>
-      <td><button class="btn btn-danger" onclick="delTeilnehmer(${t.id})">✕</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="modalTeilnehmer(${t.id})" style="margin-right:6px">✏️</button>
+        <button class="btn btn-danger" onclick="delTeilnehmer(${t.id})">✕</button>
+      </td>
     </tr>`).join('');
   return `
     <div class="section-header">
@@ -418,18 +422,20 @@ function renderTeilnehmer() {
            <tbody>${rows}</tbody></table></div></div>`}`;
 }
 
-function modalTeilnehmer() {
-  openModal('Neuer Teilnehmer', `
-    <div class="form-group"><label>Name *</label><input id="f-name" placeholder="Max Mustermann"></div>
-    <div class="form-group"><label>Anreise</label><input id="f-an" type="date" value="${today()}"></div>
-    <div class="form-group"><label>Abreise</label><input id="f-ab" type="date"></div>
-    <div class="form-group"><label>Tage (oder automatisch)</label><input id="f-tage" type="number" placeholder="z.B. 5"></div>
-    <div class="form-group"><label>Fahrzeughalter</label><input id="f-fzh"></div>
-    <div class="form-group"><label>Kennzeichen</label><input id="f-kz"></div>
-    <div class="form-group"><label>Kontakt</label><input id="f-ko"></div>
+function modalTeilnehmer(id) {
+  const isEdit = id !== undefined;
+  const t = isEdit ? state.teilnehmer.find(x=>x.id===id) : null;
+  openModal(isEdit ? 'Teilnehmer bearbeiten' : 'Neuer Teilnehmer', `
+    <div class="form-group"><label>Name *</label><input id="f-name" value="${isEdit?t.name:''}" placeholder="Max Mustermann"></div>
+    <div class="form-group"><label>Anreise</label><input id="f-an" type="date" value="${isEdit?(t.anreise||''):today()}"></div>
+    <div class="form-group"><label>Abreise</label><input id="f-ab" type="date" value="${isEdit?(t.abreise||''):''}"></div>
+    <div class="form-group"><label>Tage (oder automatisch)</label><input id="f-tage" type="number" value="${isEdit?(t.tage||''):''}" placeholder="z.B. 5"></div>
+    <div class="form-group"><label>Fahrzeughalter</label><input id="f-fzh" value="${isEdit?(t.fahrzeughalter||''):''}"></div>
+    <div class="form-group"><label>Kennzeichen</label><input id="f-kz" value="${isEdit?(t.kennzeichen||''):''}"></div>
+    <div class="form-group"><label>Kontakt</label><input id="f-ko" value="${isEdit?(t.kontakt||''):''}"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveTeilnehmer()">Speichern</button>
+      <button class="btn btn-primary" onclick="saveTeilnehmer(${isEdit?id:'undefined'})">Speichern</button>
     </div>`);
   document.getElementById('f-ab').addEventListener('change', () => {
     const an=document.getElementById('f-an').value, ab=document.getElementById('f-ab').value;
@@ -437,19 +443,24 @@ function modalTeilnehmer() {
   });
 }
 
-async function saveTeilnehmer() {
+async function saveTeilnehmer(id) {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { alert('Bitte Name eingeben'); return; }
   setSyncStatus('syncing','Speichere...');
+  const data = {
+    name, anreise:document.getElementById('f-an').value,
+    abreise:document.getElementById('f-ab').value,
+    tage:Number(document.getElementById('f-tage').value)||0,
+    fahrzeughalter:document.getElementById('f-fzh').value,
+    kennzeichen:document.getElementById('f-kz').value,
+    kontakt:document.getElementById('f-ko').value,
+  };
   try {
-    await sbInsert('teilnehmer', {
-      name, anreise:document.getElementById('f-an').value,
-      abreise:document.getElementById('f-ab').value,
-      tage:Number(document.getElementById('f-tage').value)||0,
-      fahrzeughalter:document.getElementById('f-fzh').value,
-      kennzeichen:document.getElementById('f-kz').value,
-      kontakt:document.getElementById('f-ko').value,
-    });
+    if (id !== undefined) {
+      await sbUpdate('teilnehmer', id, data);
+    } else {
+      await sbInsert('teilnehmer', data);
+    }
     closeModal(); await loadAll();
   } catch(e) { setSyncStatus('error','Fehler: '+e.message); }
 }
@@ -466,7 +477,10 @@ async function delTeilnehmer(id) {
 function renderFahrzeuge() {
   const cards = state.fahrzeuge.map(f=>`
     <div class="vehicle-card">
-      <button class="del-btn" onclick="delFahrzeug(${f.id})">✕</button>
+      <div style="position:absolute;top:10px;right:12px;display:flex;gap:8px">
+        <button onclick="modalFahrzeug(${f.id})" style="background:none;border:none;color:var(--green-mid);font-size:15px;cursor:pointer">✏️</button>
+        <button class="del-btn" style="position:static" onclick="delFahrzeug(${f.id})">✕</button>
+      </div>
       <div class="v-icon">🚗</div>
       <div class="v-name">${f.halter}</div>
       <div class="v-type">${f.typ||'–'}</div>
@@ -482,22 +496,29 @@ function renderFahrzeuge() {
       : `<div class="vehicle-grid">${cards}</div>`}`;
 }
 
-function modalFahrzeug() {
-  openModal('Neues Fahrzeug', `
-    <div class="form-group"><label>Fahrzeughalter *</label><input id="fv-h"></div>
-    <div class="form-group"><label>Typ</label><input id="fv-t" placeholder="PKW, Wohnmobil..."></div>
-    <div class="form-group"><label>Kosten (€)</label><input id="fv-k" type="number" step="0.01"></div>
+function modalFahrzeug(id) {
+  const isEdit = id !== undefined;
+  const f = isEdit ? state.fahrzeuge.find(x=>x.id===id) : null;
+  openModal(isEdit ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug', `
+    <div class="form-group"><label>Fahrzeughalter *</label><input id="fv-h" value="${isEdit?f.halter:''}"></div>
+    <div class="form-group"><label>Typ</label><input id="fv-t" value="${isEdit?(f.typ||''):''}" placeholder="PKW, Wohnmobil..."></div>
+    <div class="form-group"><label>Kosten (€)</label><input id="fv-k" type="number" step="0.01" value="${isEdit?(f.kosten||''):''}"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveFahrzeug()">Speichern</button>
+      <button class="btn btn-primary" onclick="saveFahrzeug(${isEdit?id:'undefined'})">Speichern</button>
     </div>`);
 }
-async function saveFahrzeug() {
+async function saveFahrzeug(id) {
   const halter = document.getElementById('fv-h').value.trim();
   if (!halter) { alert('Bitte Halter eingeben'); return; }
   setSyncStatus('syncing','Speichere...');
+  const data = {halter, typ:document.getElementById('fv-t').value, kosten:Number(document.getElementById('fv-k').value)||0};
   try {
-    await sbInsert('fahrzeuge', {halter, typ:document.getElementById('fv-t').value, kosten:Number(document.getElementById('fv-k').value)||0});
+    if (id !== undefined) {
+      await sbUpdate('fahrzeuge', id, data);
+    } else {
+      await sbInsert('fahrzeuge', data);
+    }
     closeModal(); await loadAll();
   } catch(e) { setSyncStatus('error',e.message); }
 }
@@ -512,16 +533,22 @@ async function delFahrzeug(id) {
 // ══════════════════════════════════════════════════════════
 function renderEinzahlungen() {
   const total = state.einzahlungen.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalBar = state.einzahlungen.filter(e=>e.zahlungsart!=='Konto').reduce((s,e)=>s+Number(e.betrag),0);
+  const totalKonto = state.einzahlungen.filter(e=>e.zahlungsart==='Konto').reduce((s,e)=>s+Number(e.betrag),0);
   const rows = state.einzahlungen.map(e=>`
     <tr>
       <td><strong>${e.teilnehmer}</strong></td><td>${e.datum}</td>
+      <td>${badge(e.zahlungsart==='Konto'?'🏦 Konto':'💵 Bar', e.zahlungsart==='Konto'?'blue':'orange')}</td>
+      <td>${e.verwendungszweck||'–'}</td>
       <td>${badge(fmt(e.betrag),'green')}</td>
       <td><button class="btn btn-danger" onclick="delEin(${e.id})">✕</button></td>
     </tr>`).join('');
   return `
     <div class="section-header">
       <h2>💰 Einzahlungen</h2>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${badge('Bar: '+fmt(totalBar),'orange')}
+        ${badge('Konto: '+fmt(totalKonto),'blue')}
         ${badge('Gesamt: '+fmt(total),'green')}
         <button class="btn btn-primary btn-sm" onclick="modalEin()">+ Eintragen</button>
       </div>
@@ -529,7 +556,7 @@ function renderEinzahlungen() {
     ${state.einzahlungen.length===0
       ? `<div class="card empty"><div class="emoji">💰</div><p>Noch keine Einzahlungen</p></div>`
       : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
-           <thead><tr>${['Teilnehmer','Datum','Betrag',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+           <thead><tr>${['Teilnehmer','Datum','Zahlungsart','Verwendungszweck','Betrag',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
            <tbody>${rows}</tbody></table></div></div>`}`;
 }
 function modalEin() {
@@ -537,6 +564,10 @@ function modalEin() {
   openModal('Einzahlung eintragen', `
     <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option>${opts}</select></div>
     <div class="form-group"><label>Datum</label><input id="ei-d" type="date" value="${today()}"></div>
+    <div class="form-group"><label>Zahlungsart</label>
+      <select id="ei-art"><option value="Barkasse">💵 Barkasse</option><option value="Konto">🏦 Konto</option></select>
+    </div>
+    <div class="form-group"><label>Verwendungszweck</label><input id="ei-zweck" placeholder="z.B. Anzahlung Camping"></div>
     <div class="form-group"><label>Betrag (€) *</label><input id="ei-b" type="number" step="0.01"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
@@ -548,7 +579,11 @@ async function saveEin() {
   if(!t||!b){alert('Pflichtfelder ausfüllen');return;}
   setSyncStatus('syncing','Speichere...');
   try {
-    await sbInsert('einzahlungen',{teilnehmer:t, datum:document.getElementById('ei-d').value, betrag:Number(b)});
+    await sbInsert('einzahlungen',{
+      teilnehmer:t, datum:document.getElementById('ei-d').value, betrag:Number(b),
+      zahlungsart:document.getElementById('ei-art').value,
+      verwendungszweck:document.getElementById('ei-zweck').value,
+    });
     closeModal(); await loadAll();
   } catch(e){setSyncStatus('error',e.message);}
 }
@@ -696,11 +731,39 @@ function renderEinstellungen() {
   const totalDusch   = Number(e.duschkartenGesamtkosten) || 0;
   const duschKptag   = ptage > 0 ? totalDusch / ptage : 0;
 
+  const standplatzTage = Number(e.standplatzGebuehrProTag) || 0;
+  const standplatzAnzahl = Number(e.standplatzAnzahl) || 1;
+  const standplatzRabatt = Number(e.standplatzRabattProzent) || 0;
+  const standplatzBrutto = standplatzTage * standplatzAnzahl;
+  const standplatzNetto = standplatzBrutto * (1 - standplatzRabatt/100);
+
   return `
     <div class="section-header"><h2>⚙️ Einstellungen</h2></div>
 
     <div class="card">
-      <h3>🏕️ Campingplatz-Kosten</h3>
+      <h3>⛺ Standplatzgebühr</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Gebühr pro Standplatz und Tag. Bei mehreren Standplätzen wird mit der Anzahl multipliziert. Rabatt wird auf den Gesamtbetrag angerechnet.</p>
+      <div class="form-group"><label>Gebühr pro Standplatz/Tag (€)</label>
+        <input type="number" step="0.01" placeholder="z.B. 12.00" value="${e.standplatzGebuehrProTag||''}"
+          onchange="saveEinstellung('standplatzGebuehrProTag',this.value)">
+      </div>
+      <div class="form-group"><label>Anzahl Standplätze</label>
+        <input type="number" step="1" min="1" placeholder="z.B. 1" value="${e.standplatzAnzahl||''}"
+          onchange="saveEinstellung('standplatzAnzahl',this.value)">
+      </div>
+      <div class="form-group"><label>Rabatt auf Standplatzgebühr (%)</label>
+        <input type="number" step="0.1" min="0" max="100" placeholder="z.B. 10" value="${e.standplatzRabattProzent||''}"
+          onchange="saveEinstellung('standplatzRabattProzent',this.value)">
+      </div>
+      <div style="background:#f3e5f5;border-radius:10px;padding:12px 16px">
+        <div style="font-size:13px;color:#6a1b9a">Gesamtkosten Standplatz (${standplatzAnzahl}× ${fmt(standplatzTage)}${standplatzRabatt>0?`, ${standplatzRabatt}% Rabatt`:''})</div>
+        <div style="font-size:20px;font-weight:700;color:#6a1b9a">${fmt(standplatzNetto)}</div>
+        ${standplatzRabatt>0?`<div style="font-size:12px;color:#6a1b9a">Brutto ${fmt(standplatzBrutto)} − Rabatt ${fmt(standplatzBrutto-standplatzNetto)}</div>`:''}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🏕️ Campingplatz-Kosten (pro Person)</h3>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Kosten pro Person und Tag, anteilig nach Anwesenheitstagen.</p>
       <div class="form-group"><label>Preis pro Person/Tag (€)</label>
         <input type="number" step="0.01" placeholder="z.B. 8.50" value="${e.campingKostenProPersonTag||''}"
@@ -745,12 +808,13 @@ function renderEinstellungen() {
     <div class="card" style="background:var(--green-pale)">
       <h3>📊 Übersicht Zusatzkosten</h3>
       <table style="width:100%;font-size:14px">
-        <tr><td style="padding:6px 0;color:var(--text-muted)">Camping-Kosten</td><td style="text-align:right;font-weight:600">${fmt(totalCamping)}</td></tr>
+        <tr><td style="padding:6px 0;color:var(--text-muted)">Standplatzgebühr</td><td style="text-align:right;font-weight:600">${fmt(standplatzNetto)}</td></tr>
+        <tr><td style="padding:6px 0;color:var(--text-muted)">Camping-Kosten (pro Person)</td><td style="text-align:right;font-weight:600">${fmt(totalCamping)}</td></tr>
         <tr><td style="padding:6px 0;color:var(--text-muted)">Strom-Kosten</td><td style="text-align:right;font-weight:600">${fmt(totalStrom)}</td></tr>
         <tr><td style="padding:6px 0;color:var(--text-muted)">Duschkarten</td><td style="text-align:right;font-weight:600">${fmt(totalDusch)}</td></tr>
         <tr style="border-top:2px solid var(--border)">
           <td style="padding:8px 0 0;font-weight:700">Summe Zusatzkosten</td>
-          <td style="text-align:right;font-weight:700;font-size:16px;padding-top:8px">${fmt(totalCamping+totalStrom+totalDusch)}</td>
+          <td style="text-align:right;font-weight:700;font-size:16px;padding-top:8px">${fmt(standplatzNetto+totalCamping+totalStrom+totalDusch)}</td>
         </tr>
       </table>
     </div>`;
@@ -770,53 +834,84 @@ async function saveEinstellung(key, value) {
 // ABRECHNUNG
 // ══════════════════════════════════════════════════════════
 function renderAbrechnung() {
-  const totalAus = state.kassenbuch.reduce((s,e)=>s+Number(e.betrag),0)
-                 + state.einkaufe.reduce((s,e)=>s+Number(e.betrag),0);
-  const fzKosten  = state.fahrzeuge.reduce((s,f)=>s+Number(f.kosten||0),0);
-  const gemKosten = totalAus - fzKosten;
-  const ptage     = state.teilnehmer.reduce((s,t)=>s+(Number(t.tage)||0),0);
-  const kpt       = ptage>0 ? gemKosten/ptage : 0;
-
   const es = state.einstellungen;
+  const ptage = state.teilnehmer.reduce((s,t)=>s+(Number(t.tage)||0),0);
+
+  // Kassenausgaben gesamt
+  const totalKb  = state.kassenbuch.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalEk  = state.einkaufe.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalAus = totalKb + totalEk;
+
+  // Fahrzeugkosten gesamt (Fixkosten)
+  const fzKosten = state.fahrzeuge.reduce((s,f)=>s+Number(f.kosten||0),0);
+
+  // Standplatz
+  const standplatzProTag  = Number(es.standplatzGebuehrProTag)||0;
+  const standplatzAnzahl  = Number(es.standplatzAnzahl)||1;
+  const standplatzRabatt  = Number(es.standplatzRabattProzent)||0;
+  const standplatzGesamt  = standplatzProTag * standplatzAnzahl * (1 - standplatzRabatt/100);
+  const standplatzKptag   = ptage>0 ? standplatzGesamt/ptage : 0;
+
+  // Weitere Kosten pro Personentag
   const campingKptag = Number(es.campingKostenProPersonTag)||0;
   const totalStrom   = (Number(es.stromPreisKwh)||0)*(Number(es.stromVerbrauchKwh)||0);
   const stromKptag   = ptage>0 ? totalStrom/ptage : 0;
   const totalDusch   = Number(es.duschkartenGesamtkosten)||0;
   const duschKptag   = ptage>0 ? totalDusch/ptage : 0;
-  const gesamtGesamt = totalAus + campingKptag*ptage + totalStrom + totalDusch;
+
+  // Gemeinschaftskosten aus Kasse (ohne Fahrzeugkosten) pro Tag
+  const gemKosten = totalAus - fzKosten;
+  const kpt       = ptage>0 ? gemKosten/ptage : 0;
+
+  // Gesamtkosten
+  const gesamtGesamt = totalAus + standplatzGesamt + campingKptag*ptage + totalStrom + totalDusch;
+  const gesamtKptag  = kpt + standplatzKptag + campingKptag + stromKptag + duschKptag;
 
   const tiles = [
-    {val:fmt(totalAus),             lbl:'Ausgaben (Kasse)',     bg:'#fce4ec'},
-    {val:fmt(campingKptag*ptage),   lbl:'Campingplatz-Kosten', bg:'#fff3e0'},
-    {val:fmt(totalStrom),           lbl:'Stromkosten',          bg:'#fff9e6'},
-    {val:fmt(totalDusch),           lbl:'Duschkarten',          bg:'#e3f2fd'},
-    {val:fmt(gesamtGesamt),         lbl:'Gesamtkosten',         bg:'#e8f5e9'},
-    {val:fmt(kpt+campingKptag+stromKptag+duschKptag), lbl:'Kosten/Tag/Person', bg:'#f3e5f5'},
-    {val:ptage,                     lbl:'Personentage',         bg:'#e0f2e9'},
+    {val:fmt(totalAus),           lbl:'Kassenausgaben',       bg:'#fce4ec'},
+    {val:fmt(standplatzGesamt),   lbl:'Standplatzgebühr',     bg:'#f3e5f5'},
+    {val:fmt(campingKptag*ptage), lbl:'Camping (pro Person)', bg:'#fff3e0'},
+    {val:fmt(totalStrom),         lbl:'Stromkosten',          bg:'#fff9e6'},
+    {val:fmt(totalDusch),         lbl:'Duschkarten',          bg:'#e3f2fd'},
+    {val:fmt(gesamtGesamt),       lbl:'Gesamtkosten',         bg:'#e8f5e9'},
+    {val:fmt(gesamtKptag),        lbl:'Kosten/Tag/Person',    bg:'#f0f7f0'},
+    {val:ptage,                   lbl:'Personentage',         bg:'#e0f2e9'},
   ];
 
+  // Pro Teilnehmer
   const abr = state.teilnehmer.map(t => {
     const tage = Number(t.tage)||0;
     const eingezahlt = state.einzahlungen
       .filter(e=>e.teilnehmer===t.name).reduce((s,e)=>s+Number(e.betrag),0);
-    const fzk      = state.fahrzeuge
+    const fzk = state.fahrzeuge
       .filter(f=>f.halter===t.fahrzeughalter||f.halter===t.name)
       .reduce((s,f)=>s+Number(f.kosten||0),0);
+    // Vorgestreckte Einkäufe & Kassenausgaben werden gutgeschrieben
+    const vorEk = state.einkaufe
+      .filter(e=>e.bezahlt_von===t.name).reduce((s,e)=>s+Number(e.betrag),0);
+    const vorKb = state.kassenbuch
+      .filter(e=>e.bezahlt_von===t.name&&e.typ==='Ausgabe').reduce((s,e)=>s+Number(e.betrag),0);
+    const gutschrift = vorEk + vorKb;
     const gk       = tage*kpt;
+    const standK   = tage*standplatzKptag;
     const campingK = tage*campingKptag;
     const stromK   = tage*stromKptag;
     const duschK   = tage*duschKptag;
-    const soll     = gk+fzk+campingK+stromK+duschK;
-    const saldo    = eingezahlt-soll;
-    return {name:t.name, tage, gk, fzk, campingK, stromK, duschK, soll, eingezahlt, saldo};
+    const soll     = gk + fzk + standK + campingK + stromK + duschK - gutschrift;
+    const saldo    = eingezahlt - soll;
+    return {name:t.name, tage, gk, fzk, standK, campingK, stromK, duschK, gutschrift, soll, eingezahlt, saldo};
   });
 
   const tableRows = abr.map(a=>`
     <tr>
       <td><strong>${a.name}</strong></td>
-      <td>${a.tage}</td><td>${fmt(a.gk)}</td><td>${fmt(a.fzk)}</td>
-      <td>${fmt(a.campingK)}</td><td>${fmt(a.stromK)}</td><td>${fmt(a.duschK)}</td>
-      <td><strong>${fmt(a.soll)}</strong></td><td>${fmt(a.eingezahlt)}</td>
+      <td style="text-align:center">${a.tage}</td>
+      <td>${fmt(a.gk)}</td><td>${fmt(a.fzk)}</td>
+      <td>${fmt(a.standK)}</td><td>${fmt(a.campingK)}</td>
+      <td>${fmt(a.stromK)}</td><td>${fmt(a.duschK)}</td>
+      <td style="color:#2d6a2d;font-weight:600">${a.gutschrift>0?'−'+fmt(a.gutschrift):'–'}</td>
+      <td><strong>${fmt(a.soll)}</strong></td>
+      <td>${fmt(a.eingezahlt)}</td>
       <td>${badge((a.saldo>=0?'+':'')+fmt(a.saldo),a.saldo>=0?'green':'red')}</td>
     </tr>`).join('');
 
@@ -827,22 +922,30 @@ function renderAbrechnung() {
     : owes.map(a=>`<div class="payment-row owes"><strong>${a.name}</strong> muss noch ${badge(fmt(Math.abs(a.saldo)),'red')} zahlen</div>`).join('')
     + gets.map(a=>`<div class="payment-row gets"><strong>${a.name}</strong> bekommt zurück: ${badge(fmt(a.saldo),'green')}</div>`).join('');
 
-  const hinweis = (campingKptag===0&&totalStrom===0&&totalDusch===0)
+  const hinweis = (standplatzProTag===0&&campingKptag===0&&totalStrom===0&&totalDusch===0)
     ? `<div style="background:#fff9e6;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#856404">
-        💡 Camping, Strom und Duschkarten noch nicht eingetragen –
+        💡 Standplatz, Camping, Strom und Duschkarten noch nicht eingetragen –
         <button onclick="switchTab('einstellungen')" style="background:none;border:none;color:var(--green-mid);font-weight:700;cursor:pointer;font-size:13px;text-decoration:underline">Jetzt eintragen →</button>
+       </div>` : '';
+
+  const gutschriftHinweis = abr.some(a=>a.gutschrift>0)
+    ? `<div style="background:#e8f5e9;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--green-dark)">
+        ✅ Vorgestreckte Einkäufe &amp; Ausgaben wurden als Gutschrift vom Gesamtsoll abgezogen.
        </div>` : '';
 
   return `
     <h2 style="font-family:'Playfair Display',serif;color:var(--green-dark);margin-bottom:18px">📋 Abrechnung</h2>
-    ${hinweis}
+    ${hinweis}${gutschriftHinweis}
     <div class="summary-grid">${tiles.map(t=>`<div class="summary-tile" style="background:${t.bg}"><div class="s-val">${t.val}</div><div class="s-lbl">${t.lbl}</div></div>`).join('')}</div>
     ${abr.length===0
-      ? `<div class="card empty"><p>Füge Teilnehmer hinzu.</p></div>`
+      ? `<div class="card empty"><p>Füge Teilnehmer hinzu, um die Abrechnung zu sehen.</p></div>`
       : `<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
-           <div style="padding:16px 18px 0"><h3>Individuelle Abrechnung</h3></div>
+           <div style="padding:16px 18px 12px">
+             <h3>Individuelle Abrechnung</h3>
+             <p style="font-size:12px;color:var(--text-muted);margin-top:4px">Gutschrift = vorgestreckte Einkäufe &amp; Kassenausgaben des Teilnehmers</p>
+           </div>
            <div class="table-wrap"><table>
-             <thead><tr>${['Name','Tage','Gemeinschaft','Fahrzeug','Camping','Strom','Dusche','Gesamtsoll','Eingezahlt','Saldo'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+             <thead><tr>${['Name','Tage','Gemeinschaft','Fahrzeug','Standplatz','Camping','Strom','Dusche','Gutschrift','Gesamtsoll','Eingezahlt','Saldo'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
              <tbody>${tableRows}</tbody>
            </table></div>
          </div>
