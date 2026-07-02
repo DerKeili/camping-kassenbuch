@@ -468,9 +468,12 @@ function renderMain(){
   if(!m)return;
   const renders={dashboard:renderDashboard,teilnehmer:renderTeilnehmer,fahrzeuge:renderFahrzeuge,
     einzahlungen:renderEinzahlungen,kassenbuch:renderKassenbuch,einkaufe:renderEinkaufe,
-    duschkarten:renderDuschkarten,abrechnung:renderAbrechnung,jahresvergleich:renderJahresvergleich,
+    duschkarten:renderDuschkarten,abrechnung:renderAbrechnung,jahresvergleich:()=>'<div style="text-align:center;padding:40px;color:#999">⏳ Lade...</div>',
     einstellungen:renderEinstellungen,benutzerverwaltung:renderBenutzer};
   if(renders[currentTab])m.innerHTML=renders[currentTab]();
+  if(currentTab==='jahresvergleich'){
+    renderJahresvergleich().then(html=>{const el=document.getElementById('main');if(el)el.innerHTML=html;}).catch(e=>{const el=document.getElementById('main');if(el)el.innerHTML='<div class="card"><p style="color:var(--red)">Fehler: '+e.message+'</p></div>';});
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -532,10 +535,12 @@ function renderDashboard(){
       const icons={erstellt:'✅',geaendert:'✏️',geloescht:'🗑️',wiederhergestellt:'♻️',angemeldet:'🔑'};
       const colors={erstellt:'act-green',geaendert:'act-blue',geloescht:'act-red',wiederhergestellt:'act-orange',angemeldet:'act-green'};
       const typ=Object.keys(icons).find(k=>a.aktion&&a.aktion.includes(k))||'erstellt';
+      const bu=state.benutzer.find(b=>b.username===a.username);
+      const displayName=bu?(bu.vorname&&bu.nachname?bu.vorname+' '+bu.nachname:bu.vorname||a.username):a.username||'?';
       return`<div class="activity-item">
         <div class="act-icon ${colors[typ]||'act-blue'}">${icons[typ]||'📝'}</div>
         <div class="act-text">
-          <strong>${a.username||'?'}</strong>: ${a.aktion||''}
+          <strong>${displayName}</strong>: ${a.aktion||''}
           ${a.details?`<span style="color:var(--mu)"> – ${a.details}</span>`:''}
           <div class="act-time">${fmtDT(a.created_at)}</div>
         </div>
@@ -777,19 +782,22 @@ async function saveFahrzeug(id){
 // EINZAHLUNGEN
 // ══════════════════════════════════════════════════════════
 function renderEinzahlungen(){
-  const hint=`<div class="section-hint">💰 <strong>Einzahlungen</strong>: Hier werden alle Zahlungen der Teilnehmer an die Gruppengemeinschaft erfasst. Wähle ob Bar oder per Überweisung. Kein Einkauf oder Ausgabe hier eintragen – dafür Kassenbuch/Einkäufe nutzen!</div>`;
+  const hint=`<div class="section-hint">💰 <strong>Einzahlungen & Auszahlungen</strong>: Einzahlungen = Geld kommt in die Kasse. Auszahlungen = Guthaben wird ausgezahlt (z.B. nach Abrechnung). Kein Einkauf oder Ausgabe hier eintragen – dafür Kassenbuch/Einkäufe nutzen!</div>`;
   const data=state.einzahlungen.filter(e=>!e.geloescht);
-  const total=data.reduce((s,e)=>s+Number(e.betrag),0);
-  const totalBar=data.filter(e=>e.zahlungsart!=='Konto').reduce((s,e)=>s+Number(e.betrag),0);
-  const totalKonto=data.filter(e=>e.zahlungsart==='Konto').reduce((s,e)=>s+Number(e.betrag),0);
+  const einzData=data.filter(e=>e.typ!=='Auszahlung');
+  const auszData=data.filter(e=>e.typ==='Auszahlung');
+  const total=einzData.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalAusz=auszData.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalBar=einzData.filter(e=>e.zahlungsart!=='Konto').reduce((s,e)=>s+Number(e.betrag),0);
+  const totalKonto=einzData.filter(e=>e.zahlungsart==='Konto').reduce((s,e)=>s+Number(e.betrag),0);
 
   const rows=data.map(e=>`
     <tr>
       <td><strong>${e.teilnehmer}</strong></td>
       <td>${e.datum}</td>
-      <td>${badge(e.zahlungsart==='Konto'?'🏦 Konto':'💵 Bar',e.zahlungsart==='Konto'?'blue':'orange')}</td>
+      <td>${e.typ==='Auszahlung'?badge('💸 Auszahlung','red'):(e.zahlungsart==='Konto'?badge('🏦 Konto','blue'):badge('💵 Bar','orange'))}</td>
       <td>${e.verwendungszweck||'–'}</td>
-      <td>${badge(fmt(e.betrag),'green')}</td>
+      <td>${badge(fmt(e.betrag),e.typ==='Auszahlung'?'red':'green')}</td>
       ${e.geaendert_von?`<td style="font-size:11px;color:var(--mu)">✏️ ${e.geaendert_von}</td>`:'<td>–</td>'}
       <td style="white-space:nowrap">
         ${canWrite()?`<button class="btn btn-ghost btn-sm" onclick="modalEin(${e.id})" style="margin-right:4px">✏️</button>
@@ -801,8 +809,8 @@ function renderEinzahlungen(){
     <div class="section-header">
       <h2>💰 Einzahlungen ${activeYear}</h2>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        ${badge('Bar: '+fmt(totalBar),'orange')}${badge('Konto: '+fmt(totalKonto),'blue')}${badge('∑ '+fmt(total),'green')}
-        ${canWrite()?`<button class="btn btn-primary btn-sm" onclick="modalEin()">+ Eintragen</button>`:''}
+        ${badge('Bar: '+fmt(totalBar),'orange')}${badge('Konto: '+fmt(totalKonto),'blue')}${badge('∑ Einzahl: '+fmt(total),'green')}${totalAusz>0?badge('Ausgezahlt: '+fmt(totalAusz),'red'):''}
+        ${canWrite()?`<button class="btn btn-primary btn-sm" onclick="modalEin()">+ Einzahlung</button><button class="btn btn-sm" style="background:#e67e22;color:#fff" onclick="modalAuszahlung()">− Auszahlung</button>`:''}
       </div>
     </div>
     ${data.length===0?`<div class="card empty"><div class="emoji">💰</div><p>Noch keine Einzahlungen</p></div>`:
@@ -831,19 +839,41 @@ function modalEin(id){
     </div>`);
 }
 
-async function saveEin(id){
+async function saveEin(id,typ){
   const t=document.getElementById('ei-t').value,b=document.getElementById('ei-b').value;
   if(!t||!b){alert('Pflichtfelder ausfüllen');return}
   setSyncStatus('syncing','Speichere...');
   const data={teilnehmer:t,datum:document.getElementById('ei-d').value,betrag:Number(b),
+    typ:typ||document.getElementById('ei-typ')?.value||'Einzahlung',
     zahlungsart:document.getElementById('ei-art').value,
     verwendungszweck:document.getElementById('ei-zweck').value,
     jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()};
   try{
     if(id!==undefined){await sbUpdate('einzahlungen',id,data);await logActivity('geaendert',t,'einzahlungen',id)}
-    else{const r=await sbInsert('einzahlungen',data);await logActivity('erstellt',t+' '+fmt(Number(b)),'einzahlungen',r[0]?.id)}
+    else{const r=await sbInsert('einzahlungen',data);await logActivity('erstellt',(data.typ==='Auszahlung'?'Auszahlung ':'Einzahlung ')+t+' '+fmt(Number(b)),'einzahlungen',r[0]?.id)}
     closeModal();await loadAll();
   }catch(e){setSyncStatus('error',e.message)}
+}
+
+function modalAuszahlung(){
+  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option>${t.name}</option>`).join('');
+  openModal('Auszahlung eintragen',`
+    <div style="background:#fce4ec;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;color:#721c24">
+      💸 Auszahlungen werden vom Guthaben des Teilnehmers abgezogen. Nur nach Abrechnung verwenden!
+    </div>
+    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option>${tnOpts}</select></div>
+    <div class="form-row">
+      <div class="form-group"><label>Datum</label><input id="ei-d" type="date" value="${today()}"></div>
+      <div class="form-group"><label>Betrag (€) *</label><input id="ei-b" type="number" step="0.01"></div>
+    </div>
+    <div class="form-group"><label>Zahlungsart</label>
+      <select id="ei-art"><option value="Barkasse">💵 Bar ausgezahlt</option><option value="Konto">🏦 Per Überweisung</option></select>
+    </div>
+    <div class="form-group"><label>Verwendungszweck</label><input id="ei-zweck" placeholder="z.B. Rückzahlung Guthaben nach Abrechnung"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" style="background:#c0392b" onclick="saveEin(undefined,'Auszahlung')">💸 Auszahlung speichern</button>
+    </div>`);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -990,22 +1020,26 @@ function modalEk(id){
     <div style="background:#e3f2fd;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12px;color:#004085">
       ℹ️ Optionaler Offener Posten: Wenn ein Produkt nur für eine Person ist, hier zuordnen.
     </div>
-    <div id="op-section">
-      <div class="form-group"><label>Persönlicher Artikel für Teilnehmer</label><select id="op-tn"><option value="">– kein persönlicher Artikel –</option>${tnOptsOP}</select></div>
-      <div id="op-extra" style="display:none">
-        <div class="form-row">
-          <div class="form-group"><label>Produkt (Offener Posten)</label><input id="op-prod" placeholder="z.B. Medikament"></div>
-          <div class="form-group"><label>Betrag Offener Posten (€)</label><input id="op-bet" type="number" step="0.01"></div>
-        </div>
+    <hr style="border:none;border-top:1px solid var(--bd);margin:14px 0">
+    <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--gd)">➕ Offene Posten (persönliche Artikel)</div>
+    <div style="font-size:12px;color:var(--mu);margin-bottom:10px">Artikel die einem bestimmten Teilnehmer gehören → werden als offener Posten gespeichert.</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
+      <div style="flex:2;min-width:120px"><label style="font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase">Teilnehmer</label>
+        <select id="op-tn-new" style="width:100%;padding:8px;border-radius:7px;border:1.5px solid var(--bd);background:var(--gf);font-size:13px"><option value="">– auswählen –</option>${tnOptsOP}</select>
       </div>
+      <div style="flex:2;min-width:120px"><label style="font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase">Produkt</label>
+        <input id="op-prod-new" placeholder="z.B. Medikament" style="width:100%;padding:8px;border-radius:7px;border:1.5px solid var(--bd);background:var(--gf);font-size:13px">
+      </div>
+      <div style="flex:1;min-width:80px"><label style="font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase">Betrag (€)</label>
+        <input id="op-bet-new" type="number" step="0.01" placeholder="0.00" style="width:100%;padding:8px;border-radius:7px;border:1.5px solid var(--bd);background:var(--gf);font-size:13px">
+      </div>
+      <button type="button" onclick="addOPRow()" class="btn btn-sm btn-ghost" style="flex-shrink:0;align-self:flex-end">+ Hinzufügen</button>
     </div>
+    <div id="op-list" style="margin-bottom:10px"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveEk(${isEdit?id:'undefined'})">Speichern</button>
+      <button class="btn btn-primary" onclick="saveEk(${isEdit?id:'undefined'})">Einkauf speichern</button>
     </div>`);
-  document.getElementById('op-tn').addEventListener('change',function(){
-    document.getElementById('op-extra').style.display=this.value?'block':'none';
-  });
 }
 
 async function saveEk(id){
@@ -1021,14 +1055,15 @@ async function saveEk(id){
     let ekId=id;
     if(id!==undefined){await sbUpdate('einkaufe',id,data);await logActivity('geaendert',data.markt,'einkaufe',id)}
     else{const r=await sbInsert('einkaufe',data);ekId=r[0]?.id;await logActivity('erstellt',data.markt+' '+fmt(Number(b)),'einkaufe',ekId)}
-    // Offener Posten
-    const opTn=document.getElementById('op-tn').value;
-    const opProd=document.getElementById('op-prod')?.value;
-    const opBet=document.getElementById('op-bet')?.value;
-    if(opTn&&opBet&&Number(opBet)>0){
-      await sbInsert('offene_posten',{einkauf_id:ekId,teilnehmer:opTn,produkt:opProd,betrag:Number(opBet),jahr:activeYear});
-      await logActivity('erstellt',`Offener Posten: ${opTn} – ${opProd}`,`offene_posten`,ekId);
+    // Mehrere Offene Posten aus der Tabelle speichern
+    const opRows=window._opRows||[];
+    for(const op of opRows){
+      if(op.teilnehmer&&op.betrag>0){
+        await sbInsert('offene_posten',{einkauf_id:ekId,teilnehmer:op.teilnehmer,produkt:op.produkt,betrag:op.betrag,jahr:activeYear});
+        await logActivity('erstellt','Offener Posten: '+op.teilnehmer+' – '+op.produkt,'offene_posten',ekId);
+      }
     }
+    window._opRows=[];
     closeModal();await loadAll();
   }catch(e){setSyncStatus('error',e.message)}
 }
@@ -1036,20 +1071,50 @@ async function saveEk(id){
 async function bezahleOffenenPosten(opId){
   const op=state.offenePosten.find(o=>o.id===opId);
   if(!op)return;
+  // Saldo dieses Teilnehmers berechnen
+  const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===op.teilnehmer&&e.typ!=='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0);
+  const ptage=state.teilnehmer.filter(t=>!t.geloescht).reduce((s,t)=>s+(Number(t.tage)||0),0);
+  const tage=Number(state.teilnehmer.find(t=>t.name===op.teilnehmer)?.tage)||0;
+  const totalAus=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0)+state.einkaufe.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+  const kpt=ptage>0?totalAus/ptage:0;
+  const approxSoll=tage*kpt;
+  const approxSaldo=eingezahlt-approxSoll;
+  const hatGuthaben=approxSaldo>0.01;
+
   openModal('Offenen Posten begleichen',`
-    <p style="font-size:14px;margin-bottom:12px"><strong>${op.teilnehmer}</strong> – ${op.produkt||'Artikel'}: ${badge(fmt(op.betrag),'orange')}</p>
-    <p style="font-size:13px;color:var(--mu);margin-bottom:16px">Den Posten als bezahlt markieren?</p>
+    <div style="background:#fff9e6;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px">
+      <strong>${op.teilnehmer}</strong> – ${op.produkt||'Artikel'}: ${badge(fmt(op.betrag),'orange')}
+    </div>
+    <div class="form-group"><label>Zahlungsart *</label>
+      <select id="op-zart">
+        <option value="Bar">💵 Bar bezahlt</option>
+        <option value="Konto">🏦 Per Überweisung</option>
+        ${hatGuthaben?`<option value="Guthaben">✅ Von Guthaben abziehen (ca. ${fmt(approxSaldo)} verfügbar)</option>`:''}
+      </select>
+    </div>
+    ${!hatGuthaben?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px">⚠️ Kein positives Guthaben für ${op.teilnehmer} vorhanden – Guthaben-Option nicht verfügbar</div>`:''}
+    <p style="font-size:12px;color:var(--mu);margin-bottom:14px">Die Zahlung wird automatisch im Kassenbuch eingetragen.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="confirmBezahleOP(${opId})">✅ Als bezahlt markieren</button>
+      <button class="btn btn-primary" onclick="confirmBezahleOP(${opId},${op.betrag},'${op.teilnehmer}','${(op.produkt||'Artikel').replace(/'/g,'')}')">✅ Bezahlung bestätigen</button>
     </div>`);
 }
 
-async function confirmBezahleOP(opId){
+async function confirmBezahleOP(opId,betrag,teilnehmer,produkt){
+  const zart=document.getElementById('op-zart').value;
   setSyncStatus('syncing','Aktualisiere...');
   try{
+    // Kassenbucheintrag erstellen
+    await sbInsert('kassenbuch',{
+      datum:today(),typ:'Einnahme',kategorie:'Diverses',
+      beschreibung:'Offener Posten: '+produkt+' ('+teilnehmer+')',
+      betrag:Number(betrag),bezahlt_von:teilnehmer,
+      zahlungsart:zart==='Guthaben'?'Guthaben':zart,
+      jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()
+    });
+    // Offenen Posten als bezahlt markieren
     await sbUpdate('offene_posten',opId,{bezahlt:true,bezahlt_am:new Date().toISOString()});
-    await logActivity('geaendert','Offener Posten bezahlt','offene_posten',opId);
+    await logActivity('geaendert','Offener Posten bezahlt ('+zart+'): '+teilnehmer+' '+produkt,'offene_posten',opId);
     closeModal();await loadAll();
   }catch(e){setSyncStatus('error',e.message)}
 }
@@ -1059,8 +1124,8 @@ async function confirmBezahleOP(opId){
 // ══════════════════════════════════════════════════════════
 function renderDuschkarten(){
   const dkWert=Number(state.einstellungen.duschkartenWert)||10;
-  const aktiv=state.duschkarten.filter(d=>!d.abgerechnet);
-  const abger=state.duschkarten.filter(d=>d.abgerechnet);
+  const aktiv=state.duschkarten.filter(d=>d.abgerechnet===false||d.abgerechnet===null||d.abgerechnet===undefined);
+  const abger=state.duschkarten.filter(d=>d.abgerechnet===true);
   const totalVerbraucht=abger.reduce((s,d)=>s+(Number(d.kartenwert||dkWert)-Number(d.restwert||0)),0);
 
   const kartenHTML=aktiv.length===0?'<p style="color:#999;font-size:13px">Keine aktiven Duschkarten</p>':aktiv.map(d=>`
@@ -1073,7 +1138,7 @@ function renderDuschkarten(){
         </div>
         ${canWrite()?`<div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-sm btn-primary" onclick="checkoutDuschkarte(${d.id})">Abreise / Checkout</button>
-          <button class="btn btn-danger" onclick="confirmDel('duschkarten',${d.id},'Duschkarte ${d.teilnehmer}')">✕</button>
+          <button class="btn btn-danger" onclick="confirmDelDK(${d.id},'${d.teilnehmer}')">✕</button>
         </div>`:''}
       </div>
     </div>`).join('');
@@ -1122,16 +1187,22 @@ function modalNewDuschkarte(){
     </div>`);
 }
 
+let _dkSaving=false;
 async function saveDuschkarte(){
+  if(_dkSaving)return;
   const tn=document.getElementById('dk-tn').value;
   const wert=document.getElementById('dk-wert').value;
   if(!tn){alert('Teilnehmer auswählen');return}
+  _dkSaving=true;
+  const btn=document.querySelector('#modal .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Speichere...';}
   setSyncStatus('syncing','Speichere...');
   try{
     await sbInsert('duschkarten',{teilnehmer:tn,kartenwert:Number(wert),jahr:activeYear,ausgegeben_am:new Date().toISOString()});
     await logActivity('erstellt','Duschkarte: '+tn,'duschkarten',null);
     closeModal();await loadAll();
   }catch(e){setSyncStatus('error',e.message)}
+  finally{_dkSaving=false;}
 }
 
 function checkoutDuschkarte(id){
@@ -1218,7 +1289,7 @@ function renderAbrechnung(){
 
   const abr=aktTN.map(t=>{
     const tage=Number(t.tage)||0;
-    const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name).reduce((s,e)=>s+Number(e.betrag),0);
+    const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name&&e.typ!=='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0)-state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name&&e.typ==='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0);
     // Einzeln abzurechnende Fahrzeugkosten
     const fzEinzeln=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug&&f.halter===t.name).reduce((s,f)=>s+Number(f.kosten||0),0);
     // Aufzuteilende Fahrzeugkosten anteilig
@@ -1314,11 +1385,15 @@ function renderEinstellungen(){
   const dkWert=Number(es.duschkartenWert)||10;
 
   const jahrButtons=state.jahre.map(j=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <span style="font-weight:600">${j.jahr}</span>
-      <span style="font-size:12px;color:var(--mu)">${j.bezeichnung||''}</span>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;padding:10px 12px;background:var(--gp);border-radius:8px">
+      <span style="font-weight:700;font-size:16px">${j.jahr}</span>
+      <span style="font-size:12px;color:var(--mu);flex:1">${j.bezeichnung||''}</span>
       ${j.aktiv?badge('Aktiv','green'):''}
-      ${isAdmin()?`<button class="btn btn-sm btn-ghost" onclick="setAktivesJahr(${j.id},${j.jahr})">Aktivieren</button>`:''}
+      ${isAdmin()?`
+        <button class="btn btn-sm btn-ghost" onclick="setAktivesJahr(${j.id},${j.jahr})">✅ Aktivieren</button>
+        <button class="btn btn-sm btn-ghost" onclick="renameJahr(${j.id},'${j.jahr}','${(j.bezeichnung||'').replace(/'/g,'')}')" style="color:var(--bl);border-color:var(--bl)">✏️ Umbenennen</button>
+        ${!j.aktiv?`<button class="btn btn-sm btn-danger" onclick="confirmDelJahr(${j.id},${j.jahr})">🗑️ Löschen</button>`:''}
+      `:''}
     </div>`).join('');
 
   return`
@@ -1589,7 +1664,7 @@ function printAbrechnung(){
 
   const abr=aktTN.map(t=>{
     const tage=Number(t.tage)||0;
-    const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name).reduce((s,e)=>s+Number(e.betrag),0);
+    const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name&&e.typ!=='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0)-state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name&&e.typ==='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0);
     const fzEinzeln=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug&&f.halter===t.name).reduce((s,f)=>s+Number(f.kosten||0),0);
     const fzAnteil=ptage>0?(fzAufteilen/ptage)*tage:0;
     const gutschrift=state.einkaufe.filter(e=>!e.geloescht&&e.bezahlt_von===t.name).reduce((s,e)=>s+Number(e.betrag),0)
@@ -1635,6 +1710,130 @@ function printAbrechnung(){
     <script>window.onload=()=>window.print()<\/script></body></html>`);
   w.document.close();
 }
+
+
+// ══════════════════════════════════════════════════════════
+// HILFSFUNKTIONEN (Offene Posten, Jahr, Duschkarten)
+// ══════════════════════════════════════════════════════════
+window._opRows = [];
+
+function addOPRow(){
+  const tn = document.getElementById('op-tn-new')?.value;
+  const prod = document.getElementById('op-prod-new')?.value;
+  const bet = parseFloat(document.getElementById('op-bet-new')?.value||'0');
+  if(!tn){alert('Teilnehmer auswählen');return;}
+  if(!bet||bet<=0){alert('Betrag eingeben');return;}
+  window._opRows.push({teilnehmer:tn, produkt:prod||'Artikel', betrag:bet});
+  renderOPList();
+  // Felder leeren
+  document.getElementById('op-tn-new').value='';
+  document.getElementById('op-prod-new').value='';
+  document.getElementById('op-bet-new').value='';
+}
+
+function renderOPList(){
+  const el = document.getElementById('op-list');
+  if(!el) return;
+  if(!window._opRows.length){el.innerHTML='';return;}
+  el.innerHTML = '<table style="width:100%;font-size:12px;border-collapse:collapse">'
+    +'<thead><tr><th style="text-align:left;padding:4px 6px;background:var(--gs);border-bottom:1px solid var(--bd)">Teilnehmer</th>'
+    +'<th style="text-align:left;padding:4px 6px;background:var(--gs);border-bottom:1px solid var(--bd)">Produkt</th>'
+    +'<th style="text-align:right;padding:4px 6px;background:var(--gs);border-bottom:1px solid var(--bd)">Betrag</th>'
+    +'<th style="padding:4px 6px;background:var(--gs);border-bottom:1px solid var(--bd)"></th></tr></thead><tbody>'
+    + window._opRows.map((r,i)=>
+      '<tr><td style="padding:4px 6px">'+r.teilnehmer+'</td>'
+      +'<td style="padding:4px 6px">'+r.produkt+'</td>'
+      +'<td style="padding:4px 6px;text-align:right">'+fmt(r.betrag)+'</td>'
+      +'<td style="padding:4px 6px"><button onclick="removeOPRow('+i+')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">✕</button></td></tr>'
+    ).join('')
+    +'</tbody></table>';
+}
+
+function removeOPRow(i){
+  window._opRows.splice(i,1);
+  renderOPList();
+}
+
+function confirmDelJahr(id, jahr){
+  openModal('Jahr ' + jahr + ' wirklich löschen?', `
+    <div style="background:#f8d7da;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#721c24">
+      ⚠️ <strong>ACHTUNG:</strong> Alle Daten des Jahres ${jahr} werden unwiderruflich gelöscht:<br>
+      Teilnehmer, Fahrzeuge, Einzahlungen, Kassenbuch, Einkäufe, Duschkarten und Offene Posten!
+    </div>
+    <div class="form-group"><label>Zur Bestätigung "${jahr}" eingeben:</label>
+      <input id="del-jahr-confirm" placeholder="${jahr}" type="number">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-danger" style="padding:9px 16px;font-size:13px" onclick="doDelJahr(${id},${jahr})">🗑️ Ja, Jahr löschen</button>
+    </div>`);
+}
+
+async function doDelJahr(id, jahr){
+  const confirm = document.getElementById('del-jahr-confirm')?.value;
+  if(Number(confirm) !== Number(jahr)){alert('Bitte ' + jahr + ' eingeben zur Bestätigung');return;}
+  setSyncStatus('syncing','Lösche Jahr '+jahr+'...');
+  try{
+    // Alle Daten des Jahres löschen
+    const tables = ['teilnehmer','fahrzeuge','einzahlungen','kassenbuch','einkaufe','duschkarten','offene_posten'];
+    for(const t of tables){
+      const rows = await sbGet(t, 'jahr=eq.'+jahr+'&select=id');
+      for(const r of rows){ try{await sbDelete(t, r.id);}catch(e){} }
+    }
+    await sbDelete('jahre', id);
+    await logActivity('geloescht','Jahr '+jahr+' komplett gelöscht','jahre',id);
+    if(activeYear===Number(jahr)){
+      // Wechsel zum ersten verfügbaren Jahr
+      const restJahre = state.jahre.filter(j=>j.id!==id);
+      if(restJahre.length){activeYear=restJahre[0].jahr;}
+    }
+    closeModal(); await loadAll();
+  }catch(e){setSyncStatus('error',e.message);}
+}
+
+function renameJahr(id, jahr, altBez){
+  openModal('Jahr ' + jahr + ' umbenennen', `
+    <div class="form-group"><label>Neue Bezeichnung</label>
+      <input id="rename-jahr-bez" value="${altBez}" placeholder="z.B. Camping Zinnowitz 2026">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="doRenameJahr(${id})">Speichern</button>
+    </div>`);
+}
+
+async function doRenameJahr(id){
+  const bez = document.getElementById('rename-jahr-bez').value.trim();
+  setSyncStatus('syncing','Speichere...');
+  try{
+    await sbUpdate('jahre', id, {bezeichnung: bez});
+    await logActivity('geaendert','Jahr umbenannt: '+bez,'jahre',id);
+    closeModal(); await loadAll();
+  }catch(e){setSyncStatus('error',e.message);}
+}
+
+function confirmDelDK(id, teilnehmer){
+  openModal('Duschkarte löschen?', `
+    <p style="font-size:14px;margin-bottom:16px">Duschkarte von <strong>${teilnehmer}</strong> wirklich löschen?<br>
+    <span style="font-size:12px;color:var(--mu)">Diese Aktion kann nicht rückgängig gemacht werden.</span></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-danger" style="padding:9px 16px;font-size:13px" onclick="doDelDK(${id})">Ja, löschen</button>
+    </div>`);
+}
+
+async function doDelDK(id){
+  setSyncStatus('syncing','Lösche...');
+  try{
+    await sbDelete('duschkarten', id);
+    await logActivity('geloescht','Duschkarte gelöscht','duschkarten',id);
+    closeModal(); await loadAll();
+  }catch(e){setSyncStatus('error',e.message);}
+}
+
+// Einzahlungen: Auszahlungen in Abrechnung berücksichtigen
+// → Auszahlungen mindern das eingezahlte Guthaben
+// (bereits in renderAbrechnung durch typ!=='Auszahlung' Filter)
 
 // ══════════════════════════════════════════════════════════
 // APP START
