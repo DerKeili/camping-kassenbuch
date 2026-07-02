@@ -2,111 +2,140 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kassenbuch">
-<title>🏕️ Camping Kassenbuch</title>
+<title>🏕️ Camping Kassenbuch PRO</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --green-dark: #1a3a1a; --green-mid: #2d6a2d; --green-light: #a8d5a2;
-    --green-pale: #e8f5e9; --green-soft: #f0f7f0; --green-faint: #f9fdf9;
-    --red: #c0392b; --orange: #e67e22; --blue: #2980b9;
-    --text: #1a3a1a; --text-muted: #556b55; --border: #c8dfc8;
-    --radius: 12px; --shadow: 0 2px 16px rgba(45,106,45,0.1);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { font-family: 'DM Sans', sans-serif; background: linear-gradient(135deg,#e8f5e9 0%,#f9fdf9 60%,#e0f2e9 100%); min-height:100vh; color:var(--text); }
-  #app { display:flex; flex-direction:column; min-height:100vh; }
-  header { background:var(--green-dark); color:#fff; padding:16px 20px 12px; position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,0.3); }
-  header h1 { font-family:'Playfair Display',serif; font-size:20px; color:var(--green-light); margin-bottom:12px; }
-  nav { display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-  nav::-webkit-scrollbar { display:none; }
-  .tab-btn { flex-shrink:0; background:rgba(255,255,255,0.08); border:none; color:#aaa; padding:8px 14px; border-radius:20px; font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
-  .tab-btn.active { background:var(--green-light); color:var(--green-dark); font-weight:700; }
-  main { flex:1; padding:20px 16px 100px; max-width:900px; margin:0 auto; width:100%; }
-  .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
-  .section-header h2 { font-family:'Playfair Display',serif; font-size:22px; color:var(--green-dark); }
-  .card { background:#fff; border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); margin-bottom:16px; }
-  .card h3 { font-family:'Playfair Display',serif; font-size:17px; color:var(--green-dark); margin-bottom:14px; }
-  .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
-  .stat-card { border-radius:var(--radius); padding:16px; box-shadow:0 1px 8px rgba(0,0,0,0.07); }
-  .stat-card .icon { font-size:26px; margin-bottom:6px; }
-  .stat-card .value { font-size:20px; font-weight:700; color:var(--green-dark); }
-  .stat-card .label { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
-  .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius); }
-  table { width:100%; border-collapse:collapse; font-size:14px; }
-  th { padding:10px 12px; text-align:left; color:var(--text-muted); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; background:var(--green-soft); border-bottom:2px solid var(--border); white-space:nowrap; }
-  td { padding:10px 12px; border-bottom:1px solid #f0f0f0; }
-  tr:last-child td { border-bottom:none; }
-  tr:nth-child(even) td { background:var(--green-faint); }
-  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; white-space:nowrap; }
-  .badge-green { background:#d4edda; color:#155724; }
-  .badge-red   { background:#f8d7da; color:#721c24; }
-  .badge-blue  { background:#cce5ff; color:#004085; }
-  .badge-orange{ background:#fff3cd; color:#856404; }
-  .btn { padding:10px 20px; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer; border:none; font-family:'DM Sans',sans-serif; transition:opacity 0.2s; }
-  .btn:active { opacity:0.75; }
-  .btn-primary { background:var(--green-mid); color:#fff; }
-  .btn-danger  { background:var(--red); color:#fff; padding:5px 10px; font-size:12px; border-radius:8px; }
-  .btn-ghost   { background:transparent; color:var(--green-mid); border:1.5px solid var(--green-mid); }
-  .btn-sm      { padding:6px 14px; font-size:13px; }
-  .modal-overlay { display:none; position:fixed; inset:0; z-index:500; background:rgba(20,30,20,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; }
-  .modal-overlay.open { display:flex; }
-  .modal { background:#fff; border-radius:18px; padding:28px 24px; width:90%; max-width:460px; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation:slideUp 0.25s ease; }
-  @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
-  .modal h3 { font-family:'Playfair Display',serif; font-size:20px; color:var(--green-dark); margin-bottom:20px; }
-  .modal-close { position:absolute; top:14px; right:16px; background:none; border:none; font-size:22px; cursor:pointer; color:#888; line-height:1; }
-  .modal-close:hover { color:var(--green-dark); }
-  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
-  .form-group { margin-bottom:14px; }
-  label { display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:4px; }
-  input, select { width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid var(--border); font-size:15px; background:var(--green-faint); font-family:'DM Sans',sans-serif; color:var(--text); outline:none; -webkit-appearance:none; }
-  input:focus, select:focus { border-color:var(--green-mid); }
-  .empty { text-align:center; padding:40px 20px; color:#999; }
-  .empty .emoji { font-size:48px; margin-bottom:10px; }
-  .empty p { font-size:15px; }
-  .vehicle-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
-  .vehicle-card { background:#fff; border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); position:relative; }
-  .vehicle-card .v-icon { font-size:32px; margin-bottom:8px; }
-  .vehicle-card .v-name { font-weight:700; font-size:16px; }
-  .vehicle-card .v-type { font-size:13px; color:var(--text-muted); margin-bottom:10px; }
-  .vehicle-card .del-btn { position:absolute; top:10px; right:12px; background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; }
-  .bar-row { margin-bottom:10px; }
-  .bar-row .bar-label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; }
-  .bar-track { background:var(--green-pale); border-radius:4px; height:8px; }
-  .bar-fill  { background:var(--green-mid); border-radius:4px; height:8px; transition:width 0.5s; }
-  .summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
-  .summary-tile { border-radius:var(--radius); padding:14px 16px; }
-  .summary-tile .s-val { font-size:18px; font-weight:700; color:var(--green-dark); }
-  .summary-tile .s-lbl { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
-  .payment-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 14px; border-radius:10px; margin-bottom:8px; font-size:14px; }
-  .payment-row.owes { background:#fce4ec; }
-  .payment-row.gets { background:#e8f5e9; }
-
-  /* ── SYNC STATUS BAR ── */
-  #sync-bar { display:flex; align-items:center; gap:8px; padding:6px 20px; font-size:12px; font-weight:600; transition:all 0.3s; }
-  #sync-bar.ok     { background:#d4edda; color:#155724; }
-  #sync-bar.syncing{ background:#fff3cd; color:#856404; }
-  #sync-bar.error  { background:#f8d7da; color:#721c24; }
-  #sync-bar.setup  { background:#cce5ff; color:#004085; }
-  .sync-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .sync-dot.ok      { background:#28a745; }
-  .sync-dot.syncing { background:#ffc107; animation:pulse 1s infinite; }
-  .sync-dot.error   { background:#dc3545; }
-  .sync-dot.setup   { background:#007bff; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-  /* ── SETUP SCREEN ── */
-  #setup-screen { display:none; position:fixed; inset:0; z-index:1000; background:linear-gradient(135deg,#e8f5e9,#f9fdf9); align-items:center; justify-content:center; }
-  #setup-screen.show { display:flex; }
-  .setup-box { background:#fff; border-radius:20px; padding:36px 32px; max-width:460px; width:90%; box-shadow:0 20px 60px rgba(45,106,45,0.15); }
-  .setup-box h2 { font-family:'Playfair Display',serif; font-size:24px; color:var(--green-dark); margin-bottom:8px; }
-  .setup-box p { font-size:14px; color:var(--text-muted); margin-bottom:20px; line-height:1.6; }
-  .setup-step { background:var(--green-pale); border-radius:10px; padding:12px 16px; margin-bottom:12px; font-size:13px; }
-  .setup-step strong { color:var(--green-dark); }
-  .setup-step code { background:#fff; padding:2px 6px; border-radius:4px; font-size:12px; font-family:monospace; }
+:root{--gd:#1a3a1a;--gm:#2d6a2d;--gl:#a8d5a2;--gp:#e8f5e9;--gs:#f0f7f0;--gf:#f9fdf9;--red:#c0392b;--or:#e67e22;--bl:#2980b9;--pu:#7b2d8b;--tx:#1a3a1a;--mu:#556b55;--bd:#c8dfc8;--ra:12px;--sh:0 2px 16px rgba(45,106,45,.1)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:linear-gradient(135deg,#e8f5e9 0%,#f9fdf9 60%,#e0f2e9 100%);min-height:100vh;color:var(--tx)}
+#app{display:flex;flex-direction:column;min-height:100vh}
+header{background:var(--gd);color:#fff;padding:12px 16px 10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+header h1{font-family:'Playfair Display',serif;font-size:18px;color:var(--gl);flex:1}
+.user-pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 10px;font-size:12px}
+.user-pill .role-badge{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:700}
+.role-admin{background:#ffd43b;color:#664}
+.role-user{background:#74c0fc;color:#004}
+nav{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+nav::-webkit-scrollbar{display:none}
+.tab-btn{flex-shrink:0;background:rgba(255,255,255,.08);border:none;color:#aaa;padding:7px 12px;border-radius:16px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap}
+.tab-btn.active{background:var(--gl);color:var(--gd);font-weight:700}
+.tab-btn.admin-only{border:1px solid rgba(255,212,59,.3)}
+main{flex:1;padding:16px 14px 80px;max-width:960px;margin:0 auto;width:100%}
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;flex-wrap:wrap}
+.section-header h2{font-family:'Playfair Display',serif;font-size:20px;color:var(--gd)}
+.section-hint{background:#e3f2fd;border-left:4px solid var(--bl);border-radius:8px;padding:10px 14px;font-size:13px;color:#004085;margin-bottom:14px;line-height:1.5}
+.card{background:#fff;border-radius:var(--ra);padding:16px 18px;box-shadow:var(--sh);margin-bottom:14px}
+.card h3{font-family:'Playfair Display',serif;font-size:16px;color:var(--gd);margin-bottom:12px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.stat-card{border-radius:var(--ra);padding:14px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.stat-card .icon{font-size:24px;margin-bottom:5px}
+.stat-card .value{font-size:18px;font-weight:700;color:var(--gd)}
+.stat-card .label{font-size:10px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:9px 10px;text-align:left;color:var(--mu);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:var(--gs);border-bottom:2px solid var(--bd);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#e4f0e4}
+th .sort-arrow{margin-left:4px;opacity:.5}
+th.sorted .sort-arrow{opacity:1}
+td{padding:9px 10px;border-bottom:1px solid #f0f0f0;font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:var(--gf)}
+tr.geloescht td{opacity:.4;text-decoration:line-through}
+.badge{display:inline-block;padding:2px 8px;border-radius:16px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-green{background:#d4edda;color:#155724}
+.badge-red{background:#f8d7da;color:#721c24}
+.badge-blue{background:#cce5ff;color:#004085}
+.badge-orange{background:#fff3cd;color:#856404}
+.badge-purple{background:#e8d5f5;color:#4a0072}
+.badge-gray{background:#e2e3e5;color:#383d41}
+.btn{padding:9px 16px;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:opacity .2s;white-space:nowrap}
+.btn:active{opacity:.75}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--gm);color:#fff}
+.btn-danger{background:var(--red);color:#fff;padding:4px 9px;font-size:11px;border-radius:7px}
+.btn-ghost{background:transparent;color:var(--gm);border:1.5px solid var(--gm)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-purple{background:var(--pu);color:#fff}
+.btn-warn{background:#e67e22;color:#fff;padding:4px 9px;font-size:11px;border-radius:7px}
+.modal-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(20,30,20,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px 20px;width:92%;max-width:520px;max-height:92vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:slideUp .2s ease}
+@keyframes slideUp{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--gd);margin-bottom:16px}
+.modal-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:#888}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+.form-group{margin-bottom:12px}
+label{display:block;font-size:12px;font-weight:600;color:var(--mu);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px}
+input,select,textarea{width:100%;padding:9px 11px;border-radius:7px;border:1.5px solid var(--bd);font-size:14px;background:var(--gf);font-family:'DM Sans',sans-serif;color:var(--tx);outline:none;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gm)}
+textarea{resize:vertical;min-height:60px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.empty{text-align:center;padding:36px 16px;color:#999}
+.empty .emoji{font-size:44px;margin-bottom:10px}
+#sync-bar{display:flex;align-items:center;gap:8px;padding:5px 16px;font-size:11px;font-weight:600;transition:all .3s}
+#sync-bar.ok{background:#d4edda;color:#155724}
+#sync-bar.syncing{background:#fff3cd;color:#856404}
+#sync-bar.error{background:#f8d7da;color:#721c24}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sync-dot.ok{background:#28a745}
+.sync-dot.syncing{background:#ffc107;animation:pulse 1s infinite}
+.sync-dot.error{background:#dc3545}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.year-selector{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border-radius:8px;padding:4px 10px}
+.year-selector select{background:transparent;border:none;color:#fff;font-weight:700;font-size:14px;padding:0;width:auto}
+.year-selector select option{background:var(--gd);color:#fff}
+/* Login */
+#login-screen{display:none;position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#e8f5e9,#f9fdf9);align-items:center;justify-content:center}
+#login-screen.show{display:flex}
+.login-box{background:#fff;border-radius:20px;padding:36px 28px;max-width:420px;width:92%;box-shadow:0 20px 60px rgba(45,106,45,.15)}
+.login-box h2{font-family:'Playfair Display',serif;font-size:26px;color:var(--gd);margin-bottom:4px}
+.login-box .subtitle{font-size:13px;color:var(--mu);margin-bottom:24px}
+/* Setup */
+#setup-screen{display:none;position:fixed;inset:0;z-index:1100;background:linear-gradient(135deg,#e8f5e9,#f9fdf9);align-items:center;justify-content:center}
+#setup-screen.show{display:flex}
+.setup-box{background:#fff;border-radius:20px;padding:32px 24px;max-width:460px;width:92%;box-shadow:0 20px 60px rgba(45,106,45,.15)}
+.setup-step{background:var(--gp);border-radius:9px;padding:10px 14px;margin-bottom:10px;font-size:13px}
+.setup-step strong{color:var(--gd)}
+.setup-step code{background:#fff;padding:1px 5px;border-radius:4px;font-size:12px;font-family:monospace}
+/* Activity log */
+.activity-item{padding:10px 0;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start}
+.activity-item:last-child{border-bottom:none}
+.act-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.act-green{background:#d4edda}
+.act-red{background:#f8d7da}
+.act-blue{background:#cce5ff}
+.act-orange{background:#fff3cd}
+.act-text{flex:1;font-size:13px}
+.act-time{font-size:11px;color:var(--mu)}
+/* Offene Posten */
+.op-card{background:var(--gf);border:1px solid var(--bd);border-radius:9px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.op-card.bezahlt{opacity:.5}
+/* Progress */
+.progress-wrap{background:var(--gp);border-radius:4px;height:6px;overflow:hidden}
+.progress-fill{height:6px;border-radius:4px;transition:width .4s}
+/* Duschkarten */
+.dk-card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:10px;position:relative}
+.dk-card.checkout{background:#f0fff4;border-color:#b7dfb7}
+/* Summary tiles */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.summary-tile{border-radius:var(--ra);padding:12px 14px}
+.summary-tile .s-val{font-size:17px;font-weight:700;color:var(--gd)}
+.summary-tile .s-lbl{font-size:10px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.payment-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;border-radius:9px;margin-bottom:7px;font-size:13px}
+.payment-row.owes{background:#fce4ec}
+.payment-row.gets{background:#e8f5e9}
+.geloescht-banner{background:#f8d7da;border-radius:7px;padding:6px 10px;font-size:11px;color:#721c24;margin-top:4px;display:inline-block}
+.restore-btn{background:#2980b9;color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif}
+/* Vehicle cards */
+.vehicle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.vehicle-card{background:#fff;border-radius:var(--ra);padding:16px;box-shadow:var(--sh);position:relative}
+.vehicle-card .v-icon{font-size:28px;margin-bottom:6px}
+.vehicle-card .v-name{font-weight:700;font-size:14px}
+.vehicle-card .v-type{font-size:12px;color:var(--mu);margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -114,46 +143,68 @@
 <!-- SETUP SCREEN -->
 <div id="setup-screen" class="show">
   <div class="setup-box">
-    <h2>🏕️ Camping Kassenbuch</h2>
-    <p>Verbinde die App mit deiner Supabase-Datenbank für Cloud-Synchronisation mit allen Teilnehmern.</p>
-    <div class="setup-step">
-      <strong>1.</strong> Gehe auf <code>supabase.com</code> → kostenlosen Account anlegen
-    </div>
-    <div class="setup-step">
-      <strong>2.</strong> Neues Projekt erstellen → Region: <code>Europe (Frankfurt)</code>
-    </div>
-    <div class="setup-step">
-      <strong>3.</strong> <code>Settings → API</code> → URL und anon-Key kopieren
-    </div>
-    <div class="setup-step">
-      <strong>4.</strong> <code>SQL Editor</code> → Setup-Script aus der .sql-Datei ausführen
-    </div>
-    <div class="form-group" style="margin-top:20px">
-      <label>Supabase Project URL</label>
-      <input id="setup-url" placeholder="https://xxx.supabase.co" type="url">
-    </div>
-    <div class="form-group">
-      <label>Supabase anon Key</label>
-      <input id="setup-key" placeholder="eyJhbGci..." type="password">
-    </div>
-    <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="saveConfig()">🔗 Verbinden</button>
-    <p id="setup-error" style="color:var(--red);font-size:13px;margin-top:10px;display:none"></p>
+    <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--gd);margin-bottom:6px">🏕️ Camping Kassenbuch PRO</h2>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:20px">Verbinde die App mit deiner Supabase-Datenbank.</p>
+    <div class="setup-step"><strong>1.</strong> <a href="https://supabase.com" target="_blank">supabase.com</a> → Account + Projekt anlegen (Region: <code>Frankfurt</code>)</div>
+    <div class="setup-step"><strong>2.</strong> SQL Editor → Migration Script ausführen</div>
+    <div class="setup-step"><strong>3.</strong> <code>Settings → API</code> → URL & anon Key kopieren</div>
+    <div class="form-group" style="margin-top:16px"><label>Supabase Project URL</label><input id="setup-url" placeholder="https://xxx.supabase.co" type="url"></div>
+    <div class="form-group"><label>Supabase anon Key</label><input id="setup-key" placeholder="eyJhbGci..." type="password"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="saveConfig()">🔗 Verbinden & Starten</button>
+    <p id="setup-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
   </div>
 </div>
 
-<div id="app">
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h2>🏕️ Camping Kassenbuch</h2>
+    <p class="subtitle">Bitte anmelden um fortzufahren</p>
+    <div class="form-group"><label>Benutzername</label><input id="login-user" placeholder="z.B. PeterS" autocomplete="username"></div>
+    <div class="form-group"><label>Passwort</label><input id="login-pass" type="password" placeholder="••••••" autocomplete="current-password"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Anmelden</button>
+    <p id="login-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+    <p style="font-size:11px;color:var(--mu);margin-top:12px;text-align:center">⚙️ <a href="#" onclick="showSetup()" style="color:var(--bl)">Datenbankverbindung ändern</a></p>
+  </div>
+</div>
+
+<!-- PASSWORT ÄNDERN MODAL (Pflicht bei Erstanmeldung) -->
+<div id="pw-change-screen" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+  <div class="login-box">
+    <h2 style="font-size:20px">🔑 Passwort ändern</h2>
+    <p class="subtitle">Bitte lege ein eigenes Passwort fest.</p>
+    <div class="form-group"><label>Neues Passwort</label><input id="pw-new" type="password" placeholder="Mindestens 4 Zeichen"></div>
+    <div class="form-group"><label>Passwort wiederholen</label><input id="pw-repeat" type="password" placeholder="••••••"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="changePw()">Passwort speichern</button>
+    <p id="pw-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></p>
+  </div>
+</div>
+
+<!-- HAUPT-APP -->
+<div id="app" style="display:none">
   <header>
-    <h1>🏕️ Camping Kassenbuch</h1>
+    <div class="header-top">
+      <h1>🏕️ Camping Kassenbuch PRO</h1>
+      <div class="year-selector">
+        <select id="year-select" onchange="changeYear(this.value)"></select>
+      </div>
+      <div class="user-pill">
+        <span id="header-username"></span>
+        <span class="role-badge" id="header-role"></span>
+        <button onclick="doLogout()" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:0 2px" title="Abmelden">⏻</button>
+      </div>
+    </div>
     <nav id="nav"></nav>
   </header>
   <div id="sync-bar" class="syncing">
     <div class="sync-dot syncing" id="sync-dot"></div>
     <span id="sync-text">Verbinde...</span>
-    <button onclick="openConfigModal()" style="margin-left:auto;background:none;border:none;font-size:11px;color:inherit;cursor:pointer;text-decoration:underline">⚙️ Einstellungen</button>
+    <button onclick="loadAll()" style="margin-left:auto;background:none;border:none;font-size:11px;color:inherit;cursor:pointer">🔄</button>
   </div>
   <main id="main"></main>
 </div>
 
+<!-- MODAL -->
 <div id="modal" class="modal-overlay">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
@@ -164,834 +215,1442 @@
 
 <script>
 // ══════════════════════════════════════════════════════════
-// SUPABASE CONFIG & CLIENT
+// SUPABASE
 // ══════════════════════════════════════════════════════════
-let SUPA_URL = '';
-let SUPA_KEY = '';
-
-function loadConfig() {
-  SUPA_URL = localStorage.getItem('supa_url') || '';
-  SUPA_KEY = localStorage.getItem('supa_key') || '';
-  return SUPA_URL && SUPA_KEY;
-}
-
-function saveConfig() {
-  const url = document.getElementById('setup-url').value.trim().replace(/\/$/, '');
-  const key = document.getElementById('setup-key').value.trim();
-  if (!url || !key) { showSetupError('Bitte beide Felder ausfüllen.'); return; }
-  if (!url.startsWith('https://')) { showSetupError('URL muss mit https:// beginnen.'); return; }
-  localStorage.setItem('supa_url', url);
-  localStorage.setItem('supa_key', key);
-  SUPA_URL = url; SUPA_KEY = key;
+let SUPA_URL='', SUPA_KEY='';
+function loadConfig(){SUPA_URL=localStorage.getItem('supa_url')||'';SUPA_KEY=localStorage.getItem('supa_key')||'';return SUPA_URL&&SUPA_KEY}
+function saveConfig(){
+  const url=document.getElementById('setup-url').value.trim().replace(/\/$/,'');
+  const key=document.getElementById('setup-key').value.trim();
+  if(!url||!key){showSetupErr('Beide Felder ausfüllen');return}
+  localStorage.setItem('supa_url',url);localStorage.setItem('supa_key',key);
+  SUPA_URL=url;SUPA_KEY=key;
   document.getElementById('setup-screen').classList.remove('show');
-  initApp();
+  document.getElementById('login-screen').classList.add('show');
 }
+function showSetup(){document.getElementById('login-screen').classList.remove('show');document.getElementById('setup-screen').classList.add('show')}
+function showSetupErr(m){const e=document.getElementById('setup-error');e.textContent=m;e.style.display='block'}
 
-function showSetupError(msg) {
-  const el = document.getElementById('setup-error');
-  el.textContent = msg; el.style.display = 'block';
+const H={'Content-Type':'application/json'};
+function ah(){return{...H,apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}}
+
+async function sbGet(t,q=''){
+  const r=await fetch(`${SUPA_URL}/rest/v1/${t}?${q}&order=id.asc`,{headers:ah()});
+  if(!r.ok)throw new Error(await r.text());return r.json();
 }
-
-// ── Supabase REST calls ───────────────────────────────────
-async function sbGet(table, query='') {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}&order=id.asc`, {
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' }
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+async function sbInsert(t,d){
+  const r=await fetch(`${SUPA_URL}/rest/v1/${t}`,{method:'POST',headers:{...ah(),Prefer:'return=representation'},body:JSON.stringify(d)});
+  if(!r.ok)throw new Error(await r.text());return r.json();
 }
-
-async function sbInsert(table, data) {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: JSON.stringify(data)
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+async function sbUpdate(t,id,d){
+  const r=await fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'PATCH',headers:{...ah(),Prefer:'return=representation'},body:JSON.stringify(d)});
+  if(!r.ok)throw new Error(await r.text());return r.json();
 }
-
-async function sbDelete(table, id) {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
-    method: 'DELETE',
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
-  });
-  if (!r.ok) throw new Error(await r.text());
+async function sbDelete(t,id){
+  const r=await fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'DELETE',headers:ah()});
+  if(!r.ok)throw new Error(await r.text());
 }
-
-async function sbUpdate(table, id, data) {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: JSON.stringify(data)
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-}
-
-async function sbUpsert(table, data, onConflict='key') {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
-    method: 'POST',
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation,resolution=merge-duplicates' },
-    body: JSON.stringify(data)
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+async function sbUpsert(t,d,oc='key'){
+  const r=await fetch(`${SUPA_URL}/rest/v1/${t}?on_conflict=${oc}`,{method:'POST',headers:{...ah(),Prefer:'return=representation,resolution=merge-duplicates'},body:JSON.stringify(d)});
+  if(!r.ok)throw new Error(await r.text());return r.json();
 }
 
 // ══════════════════════════════════════════════════════════
-// STATE (immer aus DB geladen)
+// AUTH
 // ══════════════════════════════════════════════════════════
-let state = {
-  teilnehmer: [], fahrzeuge: [], einzahlungen: [],
-  kassenbuch: [], einkaufe: [],
-  einstellungen: { campingKostenProPersonTag:0, stromPreisKwh:0, stromVerbrauchKwh:0, duschkartenGesamtkosten:0,
-    standplatzGebuehrProTag:0, standplatzAnzahl:1, standplatzRabattProzent:0 }
+let currentUser=null;
+
+async function doLogin(){
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  if(!u||!p){showLoginErr('Bitte ausfüllen');return}
+  try{
+    const res=await sbGet('benutzer',`username=eq.${encodeURIComponent(u)}&select=*`);
+    if(!res.length){showLoginErr('Benutzer nicht gefunden');return}
+    const user=res[0];
+    // Passwort prüfen (PLAIN: oder gehashtes)
+    const storedPw=user.password_hash||'';
+    let ok=false;
+    if(storedPw.startsWith('PLAIN:')){ok=storedPw.slice(6)===p}
+    else{ok=await checkHash(p,storedPw)}
+    if(!ok){showLoginErr('Falsches Passwort');return}
+    currentUser=user;
+    localStorage.setItem('camping_session',JSON.stringify({id:user.id,username:user.username,rolle:user.rolle,vorname:user.vorname||'',nachname:user.nachname||''}));
+    document.getElementById('login-screen').classList.remove('show');
+    if(user.muss_pw_aendern){showPwChange();return}
+    startApp();
+  }catch(e){showLoginErr('Fehler: '+e.message)}
+}
+
+async function checkHash(pw,hash){
+  const enc=new TextEncoder().encode(pw);
+  const buf=await crypto.subtle.digest('SHA-256',enc);
+  const h=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return h===hash;
+}
+async function hashPw(pw){
+  const enc=new TextEncoder().encode(pw);
+  const buf=await crypto.subtle.digest('SHA-256',enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function showLoginErr(m){const e=document.getElementById('login-error');e.textContent=m;e.style.display='block'}
+
+function doLogout(){
+  currentUser=null;localStorage.removeItem('camping_session');
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').classList.add('show');
+}
+
+function showPwChange(){
+  const s=document.getElementById('pw-change-screen');s.style.display='flex';
+}
+async function changePw(){
+  const n=document.getElementById('pw-new').value;
+  const r=document.getElementById('pw-repeat').value;
+  const e=document.getElementById('pw-error');
+  if(n.length<4){e.textContent='Mindestens 4 Zeichen';e.style.display='block';return}
+  if(n!==r){e.textContent='Passwörter stimmen nicht überein';e.style.display='block';return}
+  try{
+    const h=await hashPw(n);
+    await sbUpdate('benutzer',currentUser.id,{password_hash:h,muss_pw_aendern:false});
+    currentUser.muss_pw_aendern=false;
+    document.getElementById('pw-change-screen').style.display='none';
+    startApp();
+  }catch(ex){e.textContent='Fehler: '+ex.message;e.style.display='block'}
+}
+
+function isAdmin(){return currentUser&&currentUser.rolle==='admin'}
+function canWrite(){return isAdmin()}
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+const KATEGORIEN=['Lebensmittel','Getränke','Aktivitäten','Transport','Hygiene','Diverses'];
+let activeYear=2025;
+let state={
+  teilnehmer:[],fahrzeuge:[],einzahlungen:[],kassenbuch:[],einkaufe:[],
+  offenePosten:[],duschkarten:[],aktivitaeten:[],jahre:[],benutzer:[],
+  einstellungen:{campingKostenProPersonTag:0,stromPreisKwh:0,stromVerbrauchKwh:0,
+    duschkartenGesamtkosten:0,standplatzGebuehrProTag:0,standplatzAnzahl:1,
+    standplatzRabattProzent:0,standplatzAnreise:'',standplatzAbreise:'',
+    duschkartenWert:10,aktuellesJahr:2025}
 };
 
-function setSyncStatus(status, text) {
-  const bar = document.getElementById('sync-bar');
-  const dot = document.getElementById('sync-dot');
-  const txt = document.getElementById('sync-text');
-  bar.className = status; dot.className = `sync-dot ${status}`; txt.textContent = text;
+function setSyncStatus(s,t){
+  const bar=document.getElementById('sync-bar');
+  const dot=document.getElementById('sync-dot');
+  const txt=document.getElementById('sync-text');
+  if(bar)bar.className=s;if(dot)dot.className=`sync-dot ${s}`;if(txt)txt.textContent=t;
 }
 
-async function loadAll() {
-  setSyncStatus('syncing', 'Lade Daten...');
-  try {
-    const [tn, fz, ez, kb, ek, es] = await Promise.all([
-      sbGet('teilnehmer'),
-      sbGet('fahrzeuge'),
-      sbGet('einzahlungen'),
-      sbGet('kassenbuch'),
-      sbGet('einkaufe'),
+async function loadAll(){
+  setSyncStatus('syncing','Lade Daten...');
+  try{
+    const yq=`jahr=eq.${activeYear}`;
+    const [tn,fz,ez,kb,ek,op,dk,akt,jr,es,bu]=await Promise.all([
+      sbGet('teilnehmer',yq),
+      sbGet('fahrzeuge',yq),
+      sbGet('einzahlungen',yq),
+      sbGet('kassenbuch',yq),
+      sbGet('einkaufe',yq),
+      sbGet('offene_posten',yq),
+      sbGet('duschkarten',yq),
+      sbGet('aktivitaeten','order=id.desc&limit=100'),
+      sbGet('jahre','order=jahr.desc'),
       sbGet('einstellungen'),
+      sbGet('benutzer','order=username.asc'),
     ]);
-    state.teilnehmer   = tn;
-    state.fahrzeuge    = fz;
-    state.einzahlungen = ez;
-    state.kassenbuch   = kb;
-    state.einkaufe     = ek;
-    // Einstellungen als key/value → Objekt
-    es.forEach(e => {
-      if (e.key in state.einstellungen) state.einstellungen[e.key] = e.value;
-    });
-    setSyncStatus('ok', `Synchronisiert · ${new Date().toLocaleTimeString('de')}`);
+    state.teilnehmer=tn;state.fahrzeuge=fz;state.einzahlungen=ez;
+    state.kassenbuch=kb;state.einkaufe=ek;state.offenePosten=op;
+    state.duschkarten=dk;state.aktivitaeten=akt;state.jahre=jr;state.benutzer=bu;
+    es.forEach(e=>{if(e.key in state.einstellungen)state.einstellungen[e.key]=isNaN(e.value)?e.value:Number(e.value)});
+    setSyncStatus('ok',`Synchronisiert · ${new Date().toLocaleTimeString('de')}`);
     renderMain();
-  } catch(err) {
-    setSyncStatus('error', 'Fehler: ' + err.message);
-  }
+  }catch(err){setSyncStatus('error','Fehler: '+err.message)}
 }
 
-// Auto-Refresh alle 30 Sekunden
-let refreshTimer = null;
-function startAutoRefresh() {
-  clearInterval(refreshTimer);
-  refreshTimer = setInterval(() => { if (currentTab !== 'einstellungen') loadAll(); }, 30000);
+async function logActivity(aktion,details,tabelle,eintragsId){
+  try{await sbInsert('aktivitaeten',{username:currentUser.username,aktion,details,tabelle,eintrag_id:eintragsId})}catch(e){}
 }
 
 // ══════════════════════════════════════════════════════════
-// TABS & NAVIGATION
+// INIT / TABS
 // ══════════════════════════════════════════════════════════
-const KATEGORIEN = ['Lebensmittel','Getränke','Aktivitäten','Transport','Hygiene','Diverses'];
-const TABS = [
-  {id:'dashboard',    label:'📊 Dashboard'},
-  {id:'teilnehmer',   label:'👥 Teilnehmer'},
-  {id:'fahrzeuge',    label:'🚗 Fahrzeuge'},
-  {id:'einzahlungen', label:'💰 Einzahlungen'},
-  {id:'kassenbuch',   label:'📒 Kassenbuch'},
-  {id:'einkaufe',     label:'🛒 Einkäufe'},
-  {id:'abrechnung',   label:'📋 Abrechnung'},
-  {id:'einstellungen',label:'⚙️ Einstellungen'},
+let currentTab='dashboard';
+let sortState={col:null,dir:1};
+
+const TABS=[
+  {id:'dashboard',      label:'📊 Dashboard'},
+  {id:'teilnehmer',     label:'👥 Teilnehmer'},
+  {id:'fahrzeuge',      label:'🚗 Fahrzeuge'},
+  {id:'einzahlungen',   label:'💰 Einzahlungen'},
+  {id:'kassenbuch',     label:'📒 Kassenbuch'},
+  {id:'einkaufe',       label:'🛒 Einkäufe'},
+  {id:'duschkarten',    label:'🚿 Duschkarten'},
+  {id:'abrechnung',     label:'📋 Abrechnung'},
+  {id:'jahresvergleich',label:'📈 Jahresvergleich'},
+  {id:'einstellungen',  label:'⚙️ Einstellungen'},
+  {id:'benutzerverwaltung',label:'👤 Benutzer',adminOnly:true},
 ];
-let currentTab = 'dashboard';
 
-function renderNav() {
-  document.getElementById('nav').innerHTML = TABS.map(t =>
-    `<button class="tab-btn${t.id===currentTab?' active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`
-  ).join('');
+function renderNav(){
+  document.getElementById('nav').innerHTML=TABS
+    .filter(t=>!t.adminOnly||isAdmin())
+    .map(t=>`<button class="tab-btn${t.id===currentTab?' active':''}${t.adminOnly?' admin-only':''}" onclick="switchTab('${t.id}')">${t.label}</button>`)
+    .join('');
 }
-function switchTab(id) {
-  currentTab = id;
+
+function switchTab(id){
+  currentTab=id;sortState={col:null,dir:1};
+  renderNav();loadAll();
+}
+
+function changeYear(y){
+  activeYear=Number(y);
+  state.einstellungen.aktuellesJahr=activeYear;
+  loadAll();
+}
+
+function renderYearSelect(){
+  const sel=document.getElementById('year-select');
+  if(!sel)return;
+  const years=state.jahre.length?state.jahre:[{jahr:activeYear}];
+  sel.innerHTML=years.map(j=>`<option value="${j.jahr}"${j.jahr===activeYear?' selected':''}>${j.jahr}</option>`).join('');
+}
+
+async function startApp(){
+  document.getElementById('app').style.display='flex';
+  const u=currentUser;
+  document.getElementById('header-username').textContent=u.vorname?`${u.vorname} ${u.nachname||''}`:u.username;
+  const rb=document.getElementById('header-role');
+  rb.textContent=u.rolle==='admin'?'Admin':'User';
+  rb.className='role-badge '+(u.rolle==='admin'?'role-admin':'role-user');
+  // Aktives Jahr
+  try{
+    const jr=await sbGet('jahre','order=jahr.desc');
+    state.jahre=jr;
+    const aktiv=jr.find(j=>j.aktiv);
+    if(aktiv)activeYear=aktiv.jahr;
+    renderYearSelect();
+  }catch(e){}
   renderNav();
-  renderMain();
-  // Refresh wenn Tab gewechselt (außer Einstellungen)
-  if (id !== 'einstellungen') loadAll();
+  await loadAll();
+  setInterval(()=>{if(currentTab!=='einstellungen')loadAll()},30000);
 }
 
 // ══════════════════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════════════════
-function fmt(v) { return (Number(v)||0).toFixed(2).replace('.',',') + ' €'; }
-function badge(text, color='green') { return `<span class="badge badge-${color}">${text}</span>`; }
-function today() { return new Date().toISOString().slice(0,10); }
+function fmt(v){return(Number(v)||0).toFixed(2).replace('.',',')+' €'}
+function badge(t,c='green'){return`<span class="badge badge-${c}">${t}</span>`}
+function today(){return new Date().toISOString().slice(0,10)}
+function fmtDT(s){if(!s)return'–';const d=new Date(s);return d.toLocaleDateString('de')+' '+d.toLocaleTimeString('de',{hour:'2-digit',minute:'2-digit'})}
+function fmtDate(s){if(!s)return'–';const[y,m,d]=s.split('-');return`${d}.${m}.${y}`}
 
-// ── MODAL ──────────────────────────────────────────────────
-function openModal(title, html) {
-  document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-body').innerHTML = html;
+function daysBetween(a,b){
+  if(!a||!b)return 0;
+  const d=Math.round((new Date(b)-new Date(a))/86400000);
+  return d>0?d:0;
+}
+
+function openModal(title,html){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=html;
   document.getElementById('modal').classList.add('open');
 }
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
-document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) closeModal(); });
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal()});
 
-// ── RENDER MAIN ────────────────────────────────────────────
-function renderMain() {
-  const m = document.getElementById('main');
-  if (currentTab==='dashboard')    m.innerHTML = renderDashboard();
-  if (currentTab==='teilnehmer')   m.innerHTML = renderTeilnehmer();
-  if (currentTab==='fahrzeuge')    m.innerHTML = renderFahrzeuge();
-  if (currentTab==='einzahlungen') m.innerHTML = renderEinzahlungen();
-  if (currentTab==='kassenbuch')   m.innerHTML = renderKassenbuch();
-  if (currentTab==='einkaufe')     m.innerHTML = renderEinkaufe();
-  if (currentTab==='abrechnung')   m.innerHTML = renderAbrechnung();
-  if (currentTab==='einstellungen')m.innerHTML = renderEinstellungen();
+function renderMain(){
+  renderYearSelect();
+  const m=document.getElementById('main');
+  if(!m)return;
+  const renders={dashboard:renderDashboard,teilnehmer:renderTeilnehmer,fahrzeuge:renderFahrzeuge,
+    einzahlungen:renderEinzahlungen,kassenbuch:renderKassenbuch,einkaufe:renderEinkaufe,
+    duschkarten:renderDuschkarten,abrechnung:renderAbrechnung,jahresvergleich:renderJahresvergleich,
+    einstellungen:renderEinstellungen,benutzerverwaltung:renderBenutzer};
+  if(renders[currentTab])m.innerHTML=renders[currentTab]();
 }
+
+// ══════════════════════════════════════════════════════════
+// SORT HELPER
+// ══════════════════════════════════════════════════════════
+function sortBy(arr,col,fmt2){
+  if(sortState.col===col){sortState.dir*=-1}else{sortState.col=col;sortState.dir=1}
+  return [...arr].sort((a,b)=>{
+    let va=fmt2?fmt2(a[col]):a[col];
+    let vb=fmt2?fmt2(b[col]):b[col];
+    if(typeof va==='string')return va.localeCompare(vb,'de')*sortState.dir;
+    return((va||0)-(vb||0))*sortState.dir;
+  });
+}
+function sortArrow(col){return`<span class="sort-arrow">${sortState.col===col?(sortState.dir===1?'▲':'▼'):'⇅'}</span>`}
 
 // ══════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════
-function renderDashboard() {
-  const totalEin = state.einzahlungen.reduce((s,e)=>s+Number(e.betrag),0);
-  const totalAus = state.kassenbuch.reduce((s,e)=>s+Number(e.betrag),0)
-                 + state.einkaufe.reduce((s,e)=>s+Number(e.betrag),0);
-  const kasse = totalEin - totalAus;
-  const ptage = state.teilnehmer.reduce((s,t)=>s+(Number(t.tage)||0),0);
+function renderDashboard(){
+  const aktiv=state.teilnehmer.filter(t=>!t.geloescht);
+  const totalEin=state.einzahlungen.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+  const totalAus=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0)
+               +state.einkaufe.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+  const kasse=totalEin-totalAus;
+  const ptage=aktiv.reduce((s,t)=>s+(Number(t.tage)||0),0);
 
-  const cards = [
-    {icon:'👥', val:state.teilnehmer.length, lbl:'Teilnehmer', bg:'#e8f5e9'},
-    {icon:'📅', val:ptage, lbl:'Personentage', bg:'#e3f2fd'},
-    {icon:'💚', val:fmt(totalEin), lbl:'Einzahlungen', bg:'#e8f5e9'},
-    {icon:'💸', val:fmt(totalAus), lbl:'Ausgaben', bg:'#fce4ec'},
-    {icon:kasse>=0?'✅':'⚠️', val:fmt(kasse), lbl:'Kassenstand', bg:kasse>=0?'#e8f5e9':'#fff3e0'},
+  const cards=[
+    {icon:'👥',val:aktiv.length,lbl:'Teilnehmer',bg:'#e8f5e9'},
+    {icon:'📅',val:ptage,lbl:'Personentage',bg:'#e3f2fd'},
+    {icon:'💚',val:fmt(totalEin),lbl:'Einzahlungen',bg:'#e8f5e9'},
+    {icon:'💸',val:fmt(totalAus),lbl:'Ausgaben',bg:'#fce4ec'},
+    {icon:kasse>=0?'✅':'⚠️',val:fmt(kasse),lbl:'Kassenstand',bg:kasse>=0?'#e8f5e9':'#fff3e0'},
   ];
 
-  const allTx = [
-    ...state.kassenbuch.map(e=>({kat:e.kategorie||'Diverses',b:Number(e.betrag)})),
-    ...state.einkaufe.map(e=>({kat:e.kategorie||'Diverses',b:Number(e.betrag)})),
-  ];
-  const byKat = {};
-  allTx.forEach(t=>{ byKat[t.kat]=(byKat[t.kat]||0)+t.b; });
-  const entries = Object.entries(byKat).sort((a,b)=>b[1]-a[1]);
-
-  const chartHTML = entries.length===0 ? '' : `
-    <div class="card">
-      <h3>Ausgaben nach Kategorie</h3>
-      ${entries.map(([k,v])=>`
-        <div class="bar-row">
-          <div class="bar-label"><span>${k}</span><span>${fmt(v)}</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,(v/totalAus)*100)}%"></div></div>
-        </div>`).join('')}
+  // Offene Posten
+  const opOffen=state.offenePosten.filter(o=>!o.bezahlt);
+  const opHTML=opOffen.length===0?'':`
+    <div class="card" style="border-left:4px solid var(--or)">
+      <h3>⚠️ Offene Posten (${opOffen.length})</h3>
+      ${opOffen.map(o=>`<div class="op-card">
+        <span style="font-size:18px">🛒</span>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${o.teilnehmer} – ${o.produkt||'Artikel'}</div>
+          <div style="font-size:12px;color:var(--mu)">Noch nicht bezahlt</div>
+        </div>
+        ${badge(fmt(o.betrag),'orange')}
+        ${isAdmin()?`<button class="btn btn-sm btn-primary" onclick="bezahleOffenenPosten(${o.id})">Bezahlen</button>`:''}
+      </div>`).join('')}
     </div>`;
 
-  const emptyHTML = state.teilnehmer.length===0 && state.kassenbuch.length===0
-    ? `<div class="card empty"><div class="emoji">🏕️</div><p>Willkommen! Füge zuerst Teilnehmer hinzu.</p></div>` : '';
+  // Aktivitäten heute
+  const todayStr=new Date().toISOString().slice(0,10);
+  const aktHeute=state.aktivitaeten.filter(a=>a.created_at&&a.created_at.startsWith(todayStr));
+  const aktAlle=state.aktivitaeten;
 
-  return `<div class="stats-grid">${cards.map(c=>`
-    <div class="stat-card" style="background:${c.bg}">
-      <div class="icon">${c.icon}</div>
-      <div class="value">${c.val}</div>
-      <div class="label">${c.lbl}</div>
-    </div>`).join('')}</div>${chartHTML}${emptyHTML}`;
+  function aktHTML(list){
+    return list.slice(0,20).map(a=>{
+      const icons={erstellt:'✅',geaendert:'✏️',geloescht:'🗑️',wiederhergestellt:'♻️',angemeldet:'🔑'};
+      const colors={erstellt:'act-green',geaendert:'act-blue',geloescht:'act-red',wiederhergestellt:'act-orange',angemeldet:'act-green'};
+      const typ=Object.keys(icons).find(k=>a.aktion&&a.aktion.includes(k))||'erstellt';
+      return`<div class="activity-item">
+        <div class="act-icon ${colors[typ]||'act-blue'}">${icons[typ]||'📝'}</div>
+        <div class="act-text">
+          <strong>${a.username||'?'}</strong>: ${a.aktion||''}
+          ${a.details?`<span style="color:var(--mu)"> – ${a.details}</span>`:''}
+          <div class="act-time">${fmtDT(a.created_at)}</div>
+        </div>
+      </div>`;
+    }).join('')||'<div style="color:#999;font-size:13px;padding:10px">Keine Aktivitäten</div>';
+  }
+
+  return`
+    <div class="stats-grid">${cards.map(c=>`<div class="stat-card" style="background:${c.bg}"><div class="icon">${c.icon}</div><div class="value">${c.val}</div><div class="label">${c.lbl}</div></div>`).join('')}</div>
+    ${opHTML}
+    <div class="card">
+      <h3>📰 Aktivitäten heute (${aktHeute.length})</h3>
+      ${aktHTML(aktHeute)}
+      ${aktAlle.length>aktHeute.length?`
+        <details style="margin-top:12px">
+          <summary style="cursor:pointer;font-size:13px;color:var(--bl);font-weight:600">Gesamten Verlauf anzeigen (${aktAlle.length} Einträge)</summary>
+          <div style="margin-top:10px">${aktHTML(aktAlle)}</div>
+        </details>`:''}
+    </div>`;
 }
 
 // ══════════════════════════════════════════════════════════
 // TEILNEHMER
 // ══════════════════════════════════════════════════════════
-function renderTeilnehmer() {
-  const rows = state.teilnehmer.map(t=>`
-    <tr>
-      <td><strong>${t.name}</strong></td>
-      <td>${t.anreise||'–'}</td><td>${t.abreise||'–'}</td>
-      <td>${badge(t.tage+' T','blue')}</td>
-      <td>${t.fahrzeughalter||'–'}</td><td>${t.kennzeichen||'–'}</td><td>${t.kontakt||'–'}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="modalTeilnehmer(${t.id})" style="margin-right:6px">✏️</button>
-        <button class="btn btn-danger" onclick="delTeilnehmer(${t.id})">✕</button>
-      </td>
-    </tr>`).join('');
-  return `
+let tnSort={col:null,dir:1};
+function renderTeilnehmer(){
+  const hint=`<div class="section-hint">👥 <strong>Teilnehmer</strong>: Hier werden alle Personen eingetragen, die am Camping teilnehmen. Anreise & Abreise berechnen die Tage automatisch. Die Tage sind Grundlage für die anteilige Kostenberechnung.</div>`;
+  let data=[...state.teilnehmer];
+  if(tnSort.col)data=data.sort((a,b)=>{
+    let va=a[tnSort.col],vb=b[tnSort.col];
+    if(typeof va==='string')return va.localeCompare(vb,'de')*tnSort.dir;
+    return((Number(va)||0)-(Number(vb)||0))*tnSort.dir;
+  });
+
+  function thSort(col,lbl){
+    const active=tnSort.col===col;
+    const arrow=active?(tnSort.dir===1?'▲':'▼'):'⇅';
+    return`<th onclick="sortTN('${col}')" class="${active?'sorted':''}">${lbl} <span class="sort-arrow">${arrow}</span></th>`;
+  }
+
+  const rows=data.map(t=>{
+    const safeN=t.name.replace(/'/g,"\'");
+    const restoreBtn=isAdmin()?'<button class="restore-btn" onclick="doRestore(\'teilnehmer\','+t.id+',\''+safeN+'\')">Wiederherstellen</button>':'';
+    const geloeschtDiv=t.geloescht?'<div class="geloescht-banner">Gelöscht '+restoreBtn+'</div>':'';
+    const nameCell='<td><strong>'+t.name+'</strong>'+geloeschtDiv+'</td>';
+    const aenderungCell=t.geaendert_von?'<td style="font-size:11px;color:var(--mu)">✏️ '+t.geaendert_von+'<br>'+fmtDate(t.geaendert_am)+'</td>':'<td>–</td>';
+    const actionBtns=canWrite()&&!t.geloescht
+      ?'<button class="btn btn-ghost btn-sm" onclick="modalTeilnehmer('+t.id+')" style="margin-right:5px">✏️</button>'
+       +'<button class="btn btn-danger" onclick="confirmDel(\'teilnehmer\','+t.id+',\''+safeN+'\')">✕</button>'
+      :'';
+    return '<tr class="'+(t.geloescht?'geloescht':'')+'">'
+      +nameCell
+      +'<td>'+(t.anreise||'–')+'</td><td>'+(t.abreise||'–')+'</td>'
+      +'<td>'+badge((t.tage||0)+' T','blue')+'</td>'
+      +'<td>'+(t.fahrzeughalter||'–')+'</td><td>'+(t.kennzeichen||'–')+'</td><td>'+(t.kontakt||'–')+'</td>'
+      +aenderungCell
+      +'<td style="white-space:nowrap">'+actionBtns+'</td>'
+      +'</tr>';
+  }).join('');
+
+  return`${hint}
     <div class="section-header">
-      <h2>👥 Teilnehmer</h2>
-      <button class="btn btn-primary" onclick="modalTeilnehmer()">+ Hinzufügen</button>
+      <h2>👥 Teilnehmer ${activeYear}</h2>
+      ${canWrite()?`<button class="btn btn-primary" onclick="modalTeilnehmer()">+ Hinzufügen</button>`:''}
     </div>
-    ${state.teilnehmer.length===0
-      ? `<div class="card empty"><div class="emoji">👤</div><p>Noch keine Teilnehmer</p></div>`
-      : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
-           <thead><tr>${['Name','Anreise','Abreise','Tage','Fahrzeughalter','Kennzeichen','Kontakt',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-           <tbody>${rows}</tbody></table></div></div>`}`;
+    ${data.length===0?`<div class="card empty"><div class="emoji">👤</div><p>Noch keine Teilnehmer für ${activeYear}</p></div>`:
+    `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+      <thead><tr>
+        ${thSort('name','Name')}${thSort('anreise','Anreise')}${thSort('abreise','Abreise')}
+        ${thSort('tage','Tage')}${thSort('fahrzeughalter','Fahrzeughalter')}
+        <th>Kennzeichen</th><th>Kontakt</th><th>Geändert von</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div></div>`}`;
 }
 
-function modalTeilnehmer(id) {
-  const isEdit = id !== undefined;
-  const t = isEdit ? state.teilnehmer.find(x=>x.id===id) : null;
-  openModal(isEdit ? 'Teilnehmer bearbeiten' : 'Neuer Teilnehmer', `
+function sortTN(col){
+  if(tnSort.col===col){tnSort.dir*=-1}else{tnSort.col=col;tnSort.dir=1}
+  renderMain();
+}
+
+function modalTeilnehmer(id){
+  const isEdit=id!==undefined;
+  const t=isEdit?state.teilnehmer.find(x=>x.id===id):null;
+  openModal(isEdit?'Teilnehmer bearbeiten':'Neuer Teilnehmer',`
     <div class="form-group"><label>Name *</label><input id="f-name" value="${isEdit?t.name:''}" placeholder="Max Mustermann"></div>
-    <div class="form-group"><label>Anreise</label><input id="f-an" type="date" value="${isEdit?(t.anreise||''):today()}"></div>
-    <div class="form-group"><label>Abreise</label><input id="f-ab" type="date" value="${isEdit?(t.abreise||''):''}"></div>
-    <div class="form-group"><label>Tage (oder automatisch)</label><input id="f-tage" type="number" value="${isEdit?(t.tage||''):''}" placeholder="z.B. 5"></div>
-    <div class="form-group"><label>Fahrzeughalter</label><input id="f-fzh" value="${isEdit?(t.fahrzeughalter||''):''}"></div>
-    <div class="form-group"><label>Kennzeichen</label><input id="f-kz" value="${isEdit?(t.kennzeichen||''):''}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Anreise</label><input id="f-an" type="date" value="${isEdit?(t.anreise||''):today()}"></div>
+      <div class="form-group"><label>Abreise</label><input id="f-ab" type="date" value="${isEdit?(t.abreise||''):''}"></div>
+    </div>
+    <div class="form-group"><label>Tage (automatisch aus Datum)</label><input id="f-tage" type="number" value="${isEdit?(t.tage||''):''}" placeholder="Auto"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Fahrzeughalter</label><input id="f-fzh" value="${isEdit?(t.fahrzeughalter||''):''}"></div>
+      <div class="form-group"><label>Kennzeichen</label><input id="f-kz" value="${isEdit?(t.kennzeichen||''):''}"></div>
+    </div>
     <div class="form-group"><label>Kontakt</label><input id="f-ko" value="${isEdit?(t.kontakt||''):''}"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveTeilnehmer(${isEdit?id:'undefined'})">Speichern</button>
     </div>`);
-  document.getElementById('f-ab').addEventListener('change', () => {
-    const an=document.getElementById('f-an').value, ab=document.getElementById('f-ab').value;
-    if (an && ab) { const d=Math.round((new Date(ab)-new Date(an))/86400000); if(d>0) document.getElementById('f-tage').value=d; }
-  });
+  function autoTage(){
+    const an=document.getElementById('f-an').value,ab=document.getElementById('f-ab').value;
+    if(an&&ab){const d=Math.round((new Date(ab)-new Date(an))/86400000);if(d>0)document.getElementById('f-tage').value=d}
+  }
+  document.getElementById('f-an').addEventListener('change',autoTage);
+  document.getElementById('f-ab').addEventListener('change',autoTage);
 }
 
-async function saveTeilnehmer(id) {
-  const name = document.getElementById('f-name').value.trim();
-  if (!name) { alert('Bitte Name eingeben'); return; }
+async function saveTeilnehmer(id){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){alert('Name eingeben');return}
   setSyncStatus('syncing','Speichere...');
-  const data = {
-    name, anreise:document.getElementById('f-an').value,
-    abreise:document.getElementById('f-ab').value,
-    tage:Number(document.getElementById('f-tage').value)||0,
-    fahrzeughalter:document.getElementById('f-fzh').value,
-    kennzeichen:document.getElementById('f-kz').value,
-    kontakt:document.getElementById('f-ko').value,
-  };
-  try {
-    if (id !== undefined) {
-      await sbUpdate('teilnehmer', id, data);
-    } else {
-      await sbInsert('teilnehmer', data);
-    }
-    closeModal(); await loadAll();
-  } catch(e) { setSyncStatus('error','Fehler: '+e.message); }
+  const data={name,anreise:document.getElementById('f-an').value,abreise:document.getElementById('f-ab').value,
+    tage:Number(document.getElementById('f-tage').value)||0,fahrzeughalter:document.getElementById('f-fzh').value,
+    kennzeichen:document.getElementById('f-kz').value,kontakt:document.getElementById('f-ko').value,
+    jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()};
+  try{
+    if(id!==undefined){await sbUpdate('teilnehmer',id,data);await logActivity('geaendert',name,'teilnehmer',id)}
+    else{const r=await sbInsert('teilnehmer',{...data});await logActivity('erstellt',name,'teilnehmer',r[0]?.id)}
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
 }
 
-async function delTeilnehmer(id) {
-  if(!confirm('Teilnehmer löschen?')) return;
+async function restoreTeilnehmer(id){
+  await sbUpdate('teilnehmer',id,{geloescht:false,geloescht_von:null});
+  await logActivity('wiederhergestellt','Teilnehmer','teilnehmer',id);
+  await loadAll();
+}
+
+// ══════════════════════════════════════════════════════════
+// LÖSCHEN MIT BESTÄTIGUNG & PAPIERKORB
+// ══════════════════════════════════════════════════════════
+function confirmDel(tabelle,id,name){
+  openModal('Wirklich löschen?',`
+    <p style="font-size:14px;margin-bottom:16px">Soll <strong>${name}</strong> wirklich gelöscht werden?<br>
+    <span style="font-size:12px;color:var(--mu)">Admins können Einträge wiederherstellen.</span></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-danger" style="padding:9px 18px;font-size:14px" onclick="doSoftDelete('${tabelle}',${id},'${name}')">Ja, löschen</button>
+    </div>`);
+}
+
+async function doSoftDelete(tabelle,id,name){
   setSyncStatus('syncing','Lösche...');
-  try { await sbDelete('teilnehmer', id); await loadAll(); } catch(e) { setSyncStatus('error',e.message); }
+  try{
+    await sbUpdate(tabelle,id,{geloescht:true,geloescht_von:currentUser.username});
+    await logActivity('geloescht',name,tabelle,id);
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+async function doRestore(tabelle,id,name){
+  await sbUpdate(tabelle,id,{geloescht:false,geloescht_von:null});
+  await logActivity('wiederhergestellt',name,tabelle,id);
+  await loadAll();
 }
 
 // ══════════════════════════════════════════════════════════
 // FAHRZEUGE
 // ══════════════════════════════════════════════════════════
-function renderFahrzeuge() {
-  const cards = state.fahrzeuge.map(f=>`
+function renderFahrzeuge(){
+  const hint=`<div class="section-hint">🚗 <strong>Fahrzeuge</strong>: Trage hier alle Fahrzeuge ein. Wähle ob die Kosten auf alle aufgeteilt oder dem Halter einzeln berechnet werden. Pro Standplatz kann ein Fahrzeug als kostenfrei markiert werden.</div>`;
+  const aktFz=state.fahrzeuge.filter(f=>!f.geloescht);
+  const cards=aktFz.map(f=>`
     <div class="vehicle-card">
-      <div style="position:absolute;top:10px;right:12px;display:flex;gap:8px">
-        <button onclick="modalFahrzeug(${f.id})" style="background:none;border:none;color:var(--green-mid);font-size:15px;cursor:pointer">✏️</button>
-        <button class="del-btn" style="position:static" onclick="delFahrzeug(${f.id})">✕</button>
+      <div style="position:absolute;top:10px;right:10px;display:flex;gap:6px">
+        ${canWrite()?`<button onclick="modalFahrzeug(${f.id})" style="background:none;border:none;color:var(--gm);font-size:14px;cursor:pointer">✏️</button>
+        <button onclick="confirmDel('fahrzeuge',${f.id},'${f.halter}')" style="background:none;border:none;color:var(--red);font-size:14px;cursor:pointer">✕</button>`:''}
       </div>
       <div class="v-icon">🚗</div>
       <div class="v-name">${f.halter}</div>
       <div class="v-type">${f.typ||'–'}</div>
-      ${badge(fmt(f.kosten),'orange')}
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">
+        ${badge(fmt(f.kosten),'orange')}
+        ${f.standplatz_fahrzeug?badge('🅿️ Standplatz-Fahrzeug','green'):''}
+        ${badge(f.kostenart==='einzeln'?'👤 Einzelabrechnung':'👥 Aufteilen',f.kostenart==='einzeln'?'purple':'blue')}
+      </div>
     </div>`).join('');
-  return `
+
+  return`${hint}
     <div class="section-header">
-      <h2>🚗 Fahrzeuge</h2>
-      <button class="btn btn-primary" onclick="modalFahrzeug()">+ Hinzufügen</button>
+      <h2>🚗 Fahrzeuge ${activeYear}</h2>
+      ${canWrite()?`<button class="btn btn-primary" onclick="modalFahrzeug()">+ Hinzufügen</button>`:''}
     </div>
-    ${state.fahrzeuge.length===0
-      ? `<div class="card empty"><div class="emoji">🚗</div><p>Keine Fahrzeuge</p></div>`
-      : `<div class="vehicle-grid">${cards}</div>`}`;
+    ${aktFz.length===0?`<div class="card empty"><div class="emoji">🚗</div><p>Keine Fahrzeuge</p></div>`:`<div class="vehicle-grid">${cards}</div>`}
+    ${state.fahrzeuge.filter(f=>f.geloescht).length>0&&isAdmin()?`
+      <details style="margin-top:12px"><summary style="cursor:pointer;font-size:13px;color:var(--mu)">Gelöschte Fahrzeuge (${state.fahrzeuge.filter(f=>f.geloescht).length})</summary>
+      ${state.fahrzeuge.filter(f=>f.geloescht).map(f=>`<div class="card" style="opacity:.5;margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+        <span>🚗 ${f.halter}</span><button class="restore-btn" onclick="doRestore('fahrzeuge',${f.id},'${f.halter}')">Wiederherstellen</button>
+      </div>`).join('')}</details>`:''}`;
 }
 
-function modalFahrzeug(id) {
-  const isEdit = id !== undefined;
-  const f = isEdit ? state.fahrzeuge.find(x=>x.id===id) : null;
-  openModal(isEdit ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug', `
-    <div class="form-group"><label>Fahrzeughalter *</label><input id="fv-h" value="${isEdit?f.halter:''}"></div>
-    <div class="form-group"><label>Typ</label><input id="fv-t" value="${isEdit?(f.typ||''):''}" placeholder="PKW, Wohnmobil..."></div>
-    <div class="form-group"><label>Kosten (€)</label><input id="fv-k" type="number" step="0.01" value="${isEdit?(f.kosten||''):''}"></div>
+function modalFahrzeug(id){
+  const isEdit=id!==undefined;
+  const f=isEdit?state.fahrzeuge.find(x=>x.id===id):null;
+  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option${isEdit&&f.halter===t.name?' selected':''}>${t.name}</option>`).join('');
+  openModal(isEdit?'Fahrzeug bearbeiten':'Neues Fahrzeug',`
+    <div class="form-group"><label>Fahrzeughalter *</label>
+      <select id="fv-h"><option value="">– auswählen –</option>${tnOpts}</select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Typ</label><input id="fv-t" value="${isEdit?(f.typ||''):''}" placeholder="PKW, Wohnmobil..."></div>
+      <div class="form-group"><label>Kosten (€)</label><input id="fv-k" type="number" step="0.01" value="${isEdit?(f.kosten||''):''}"></div>
+    </div>
+    <div class="form-group"><label>Kostenabrechnung</label>
+      <select id="fv-art">
+        <option value="aufteilen"${isEdit&&f.kostenart!=='einzeln'?' selected':''}>👥 Auf alle aufteilen</option>
+        <option value="einzeln"${isEdit&&f.kostenart==='einzeln'?' selected':''}>👤 Einzeln abrechnen (nur Halter)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:14px">
+        <input type="checkbox" id="fv-sp" ${isEdit&&f.standplatz_fahrzeug?'checked':''} style="width:auto;margin:0">
+        🅿️ Dieses Fahrzeug ist das kostenfreie Standplatz-Fahrzeug
+      </label>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveFahrzeug(${isEdit?id:'undefined'})">Speichern</button>
     </div>`);
 }
-async function saveFahrzeug(id) {
-  const halter = document.getElementById('fv-h').value.trim();
-  if (!halter) { alert('Bitte Halter eingeben'); return; }
+
+async function saveFahrzeug(id){
+  const halter=document.getElementById('fv-h').value;
+  if(!halter){alert('Halter auswählen');return}
   setSyncStatus('syncing','Speichere...');
-  const data = {halter, typ:document.getElementById('fv-t').value, kosten:Number(document.getElementById('fv-k').value)||0};
-  try {
-    if (id !== undefined) {
-      await sbUpdate('fahrzeuge', id, data);
-    } else {
-      await sbInsert('fahrzeuge', data);
-    }
-    closeModal(); await loadAll();
-  } catch(e) { setSyncStatus('error',e.message); }
-}
-async function delFahrzeug(id) {
-  if(!confirm('Fahrzeug löschen?')) return;
-  setSyncStatus('syncing','Lösche...');
-  try { await sbDelete('fahrzeuge',id); await loadAll(); } catch(e) { setSyncStatus('error',e.message); }
+  const data={halter,typ:document.getElementById('fv-t').value,kosten:Number(document.getElementById('fv-k').value)||0,
+    kostenart:document.getElementById('fv-art').value,
+    standplatz_fahrzeug:document.getElementById('fv-sp').checked,
+    jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()};
+  try{
+    if(id!==undefined){await sbUpdate('fahrzeuge',id,data);await logActivity('geaendert',halter,'fahrzeuge',id)}
+    else{const r=await sbInsert('fahrzeuge',data);await logActivity('erstellt',halter,'fahrzeuge',r[0]?.id)}
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
 }
 
 // ══════════════════════════════════════════════════════════
 // EINZAHLUNGEN
 // ══════════════════════════════════════════════════════════
-function renderEinzahlungen() {
-  const total = state.einzahlungen.reduce((s,e)=>s+Number(e.betrag),0);
-  const totalBar = state.einzahlungen.filter(e=>e.zahlungsart!=='Konto').reduce((s,e)=>s+Number(e.betrag),0);
-  const totalKonto = state.einzahlungen.filter(e=>e.zahlungsart==='Konto').reduce((s,e)=>s+Number(e.betrag),0);
-  const rows = state.einzahlungen.map(e=>`
+function renderEinzahlungen(){
+  const hint=`<div class="section-hint">💰 <strong>Einzahlungen</strong>: Hier werden alle Zahlungen der Teilnehmer an die Gruppengemeinschaft erfasst. Wähle ob Bar oder per Überweisung. Kein Einkauf oder Ausgabe hier eintragen – dafür Kassenbuch/Einkäufe nutzen!</div>`;
+  const data=state.einzahlungen.filter(e=>!e.geloescht);
+  const total=data.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalBar=data.filter(e=>e.zahlungsart!=='Konto').reduce((s,e)=>s+Number(e.betrag),0);
+  const totalKonto=data.filter(e=>e.zahlungsart==='Konto').reduce((s,e)=>s+Number(e.betrag),0);
+
+  const rows=data.map(e=>`
     <tr>
-      <td><strong>${e.teilnehmer}</strong></td><td>${e.datum}</td>
-      <td>${badge(e.zahlungsart==='Konto'?'🏦 Konto':'💵 Bar', e.zahlungsart==='Konto'?'blue':'orange')}</td>
+      <td><strong>${e.teilnehmer}</strong></td>
+      <td>${e.datum}</td>
+      <td>${badge(e.zahlungsart==='Konto'?'🏦 Konto':'💵 Bar',e.zahlungsart==='Konto'?'blue':'orange')}</td>
       <td>${e.verwendungszweck||'–'}</td>
       <td>${badge(fmt(e.betrag),'green')}</td>
-      <td><button class="btn btn-danger" onclick="delEin(${e.id})">✕</button></td>
+      ${e.geaendert_von?`<td style="font-size:11px;color:var(--mu)">✏️ ${e.geaendert_von}</td>`:'<td>–</td>'}
+      <td style="white-space:nowrap">
+        ${canWrite()?`<button class="btn btn-ghost btn-sm" onclick="modalEin(${e.id})" style="margin-right:4px">✏️</button>
+        <button class="btn btn-danger" onclick="confirmDel('einzahlungen',${e.id},'${e.teilnehmer}')">✕</button>`:''}
+      </td>
     </tr>`).join('');
-  return `
+
+  return`${hint}
     <div class="section-header">
-      <h2>💰 Einzahlungen</h2>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        ${badge('Bar: '+fmt(totalBar),'orange')}
-        ${badge('Konto: '+fmt(totalKonto),'blue')}
-        ${badge('Gesamt: '+fmt(total),'green')}
-        <button class="btn btn-primary btn-sm" onclick="modalEin()">+ Eintragen</button>
+      <h2>💰 Einzahlungen ${activeYear}</h2>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        ${badge('Bar: '+fmt(totalBar),'orange')}${badge('Konto: '+fmt(totalKonto),'blue')}${badge('∑ '+fmt(total),'green')}
+        ${canWrite()?`<button class="btn btn-primary btn-sm" onclick="modalEin()">+ Eintragen</button>`:''}
       </div>
     </div>
-    ${state.einzahlungen.length===0
-      ? `<div class="card empty"><div class="emoji">💰</div><p>Noch keine Einzahlungen</p></div>`
-      : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
-           <thead><tr>${['Teilnehmer','Datum','Zahlungsart','Verwendungszweck','Betrag',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-           <tbody>${rows}</tbody></table></div></div>`}`;
+    ${data.length===0?`<div class="card empty"><div class="emoji">💰</div><p>Noch keine Einzahlungen</p></div>`:
+    `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+      <thead><tr><th>Teilnehmer</th><th>Datum</th><th>Zahlungsart</th><th>Verwendungszweck</th><th>Betrag</th><th>Geändert</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>`}`;
 }
-function modalEin() {
-  const opts = state.teilnehmer.map(t=>`<option>${t.name}</option>`).join('');
-  openModal('Einzahlung eintragen', `
-    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option>${opts}</select></div>
-    <div class="form-group"><label>Datum</label><input id="ei-d" type="date" value="${today()}"></div>
-    <div class="form-group"><label>Zahlungsart</label>
-      <select id="ei-art"><option value="Barkasse">💵 Barkasse</option><option value="Konto">🏦 Konto</option></select>
+
+function modalEin(id){
+  const isEdit=id!==undefined;
+  const e=isEdit?state.einzahlungen.find(x=>x.id===id):null;
+  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option${isEdit&&e.teilnehmer===t.name?' selected':''}>${t.name}</option>`).join('');
+  openModal(isEdit?'Einzahlung bearbeiten':'Einzahlung eintragen',`
+    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option>${tnOpts}</select></div>
+    <div class="form-row">
+      <div class="form-group"><label>Datum</label><input id="ei-d" type="date" value="${isEdit?(e.datum||today()):today()}"></div>
+      <div class="form-group"><label>Betrag (€) *</label><input id="ei-b" type="number" step="0.01" value="${isEdit?(e.betrag||''):''}"></div>
     </div>
-    <div class="form-group"><label>Verwendungszweck</label><input id="ei-zweck" placeholder="z.B. Anzahlung Camping"></div>
-    <div class="form-group"><label>Betrag (€) *</label><input id="ei-b" type="number" step="0.01"></div>
+    <div class="form-group"><label>Zahlungsart</label>
+      <select id="ei-art"><option value="Barkasse"${isEdit&&e.zahlungsart!=='Konto'?' selected':''}>💵 Barkasse</option><option value="Konto"${isEdit&&e.zahlungsart==='Konto'?' selected':''}>🏦 Konto</option></select>
+    </div>
+    <div class="form-group"><label>Verwendungszweck</label><input id="ei-zweck" value="${isEdit?(e.verwendungszweck||''):''}" placeholder="z.B. Anzahlung Camping"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveEin()">Speichern</button>
+      <button class="btn btn-primary" onclick="saveEin(${isEdit?id:'undefined'})">Speichern</button>
     </div>`);
 }
-async function saveEin() {
-  const t=document.getElementById('ei-t').value, b=document.getElementById('ei-b').value;
-  if(!t||!b){alert('Pflichtfelder ausfüllen');return;}
+
+async function saveEin(id){
+  const t=document.getElementById('ei-t').value,b=document.getElementById('ei-b').value;
+  if(!t||!b){alert('Pflichtfelder ausfüllen');return}
   setSyncStatus('syncing','Speichere...');
-  try {
-    await sbInsert('einzahlungen',{
-      teilnehmer:t, datum:document.getElementById('ei-d').value, betrag:Number(b),
-      zahlungsart:document.getElementById('ei-art').value,
-      verwendungszweck:document.getElementById('ei-zweck').value,
-    });
-    closeModal(); await loadAll();
-  } catch(e){setSyncStatus('error',e.message);}
-}
-async function delEin(id){
-  if(!confirm('Löschen?'))return;
-  setSyncStatus('syncing','Lösche...');
-  try{await sbDelete('einzahlungen',id);await loadAll();}catch(e){setSyncStatus('error',e.message);}
+  const data={teilnehmer:t,datum:document.getElementById('ei-d').value,betrag:Number(b),
+    zahlungsart:document.getElementById('ei-art').value,
+    verwendungszweck:document.getElementById('ei-zweck').value,
+    jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()};
+  try{
+    if(id!==undefined){await sbUpdate('einzahlungen',id,data);await logActivity('geaendert',t,'einzahlungen',id)}
+    else{const r=await sbInsert('einzahlungen',data);await logActivity('erstellt',t+' '+fmt(Number(b)),'einzahlungen',r[0]?.id)}
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
 }
 
 // ══════════════════════════════════════════════════════════
 // KASSENBUCH
 // ══════════════════════════════════════════════════════════
-function renderKassenbuch() {
-  const total = state.kassenbuch.reduce((s,e)=>s+Number(e.betrag),0);
-  const rows = state.kassenbuch.map(e=>`
-    <tr>
+function renderKassenbuch(){
+  const hint=`<div class="section-hint">📒 <strong>Kassenbuch</strong>: Alle Ausgaben und Einnahmen der Gruppenkasse. Hier landen z.B. Campinggebühren, gemeinsame Aktivitäten, Rückerstattungen. Einkäufe für Lebensmittel etc. im Reiter "Einkäufe" erfassen!</div>`;
+  const data=state.kassenbuch;
+  const aktiv=data.filter(e=>!e.geloescht);
+  const total=aktiv.reduce((s,e)=>s+Number(e.betrag),0);
+
+  const rows=data.map(e=>`
+    <tr class="${e.geloescht?'geloescht':''}">
       <td>${e.datum}</td>
       <td>${badge(e.typ,e.typ==='Einnahme'?'green':'red')}</td>
-      <td>${e.kategorie||'–'}</td><td>${e.beschreibung||'–'}</td>
+      <td>${e.kategorie||'–'}</td>
+      <td>${e.beschreibung||'–'}</td>
+      <td>${badge(e.zahlungsart==='Konto'?'🏦':'💵','gray')}</td>
       <td><strong>${fmt(e.betrag)}</strong></td>
       <td>${e.bezahlt_von||'–'}</td>
-      <td><button class="btn btn-danger" onclick="delKb(${e.id})">✕</button></td>
+      ${e.geaendert_von?`<td style="font-size:11px;color:var(--mu)">✏️ ${e.geaendert_von}</td>`:'<td>–</td>'}
+      <td style="white-space:nowrap">
+        ${canWrite()&&!e.geloescht?`<button class="btn btn-ghost btn-sm" onclick="modalKb(${e.id})" style="margin-right:4px">✏️</button>
+        <button class="btn btn-danger" onclick="confirmDel('kassenbuch',${e.id},'${(e.beschreibung||'Eintrag').replace(/'/g,'')}')">✕</button>`:''}
+        ${e.geloescht&&isAdmin()?`<button class="restore-btn" onclick="doRestore('kassenbuch',${e.id},'${e.beschreibung||'Eintrag'}')">Wiederherstellen</button>`:''}
+      </td>
     </tr>`).join('');
-  return `
+
+  return`${hint}
     <div class="section-header">
-      <h2>📒 Kassenbuch</h2>
-      <div style="display:flex;gap:8px;align-items:center">
+      <h2>📒 Kassenbuch ${activeYear}</h2>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         ${badge('Ausgaben: '+fmt(total),'red')}
-        <button class="btn btn-primary btn-sm" onclick="modalKb()">+ Eintrag</button>
+        ${canWrite()?`<button class="btn btn-primary btn-sm" onclick="modalKb()">+ Eintrag</button>`:''}
       </div>
     </div>
-    ${state.kassenbuch.length===0
-      ? `<div class="card empty"><div class="emoji">📒</div><p>Kein Eintrag vorhanden</p></div>`
-      : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
-           <thead><tr>${['Datum','Typ','Kategorie','Beschreibung','Betrag','Bezahlt von',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-           <tbody>${rows}</tbody></table></div></div>`}`;
+    ${aktiv.length===0?`<div class="card empty"><div class="emoji">📒</div><p>Kein Eintrag</p></div>`:
+    `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+      <thead><tr><th>Datum</th><th>Typ</th><th>Kategorie</th><th>Beschreibung</th><th>Zahlung</th><th>Betrag</th><th>Bezahlt von</th><th>Geändert</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>`}`;
 }
-function modalKb() {
-  const katOpts=KATEGORIEN.map(k=>`<option>${k}</option>`).join('');
-  const tnOpts=state.teilnehmer.map(t=>`<option>${t.name}</option>`).join('');
-  openModal('Kassenbucheintrag',`
-    <div class="form-group"><label>Datum</label><input id="kb-d" type="date" value="${today()}"></div>
-    <div class="form-group"><label>Typ</label><select id="kb-typ"><option>Ausgabe</option><option>Einnahme</option></select></div>
-    <div class="form-group"><label>Kategorie</label><select id="kb-kat"><option value="">– auswählen –</option>${katOpts}</select></div>
-    <div class="form-group"><label>Beschreibung</label><input id="kb-desc"></div>
-    <div class="form-group"><label>Betrag (€) *</label><input id="kb-b" type="number" step="0.01"></div>
-    <div class="form-group"><label>Bezahlt von</label><select id="kb-von"><option value="">– auswählen –</option>${tnOpts}</select></div>
+
+function modalKb(id){
+  const isEdit=id!==undefined;
+  const e=isEdit?state.kassenbuch.find(x=>x.id===id):null;
+  const katOpts=KATEGORIEN.map(k=>`<option${isEdit&&e.kategorie===k?' selected':''}>${k}</option>`).join('');
+  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option${isEdit&&e.bezahlt_von===t.name?' selected':''}>${t.name}</option>`).join('');
+  openModal(isEdit?'Kassenbucheintrag bearbeiten':'Kassenbucheintrag',`
+    <div class="form-row">
+      <div class="form-group"><label>Datum</label><input id="kb-d" type="date" value="${isEdit?(e.datum||today()):today()}"></div>
+      <div class="form-group"><label>Typ</label><select id="kb-typ"><option${isEdit&&e.typ==='Ausgabe'?' selected':''}>Ausgabe</option><option${isEdit&&e.typ==='Einnahme'?' selected':''}>Einnahme</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Kategorie</label><select id="kb-kat"><option value="">– auswählen –</option>${katOpts}</select></div>
+      <div class="form-group"><label>Zahlungsart</label><select id="kb-zart"><option value="Bar"${!isEdit||e.zahlungsart!=='Konto'?' selected':''}>💵 Bar</option><option value="Konto"${isEdit&&e.zahlungsart==='Konto'?' selected':''}>🏦 Konto</option></select></div>
+    </div>
+    <div class="form-group"><label>Beschreibung</label><input id="kb-desc" value="${isEdit?(e.beschreibung||''):''}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Betrag (€) *</label><input id="kb-b" type="number" step="0.01" value="${isEdit?(e.betrag||''):''}"></div>
+      <div class="form-group"><label>Bezahlt von</label><select id="kb-von"><option value="">– auswählen –</option>${tnOpts}</select></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveKb()">Speichern</button>
+      <button class="btn btn-primary" onclick="saveKb(${isEdit?id:'undefined'})">Speichern</button>
     </div>`);
 }
-async function saveKb(){
+
+async function saveKb(id){
   const b=document.getElementById('kb-b').value;
-  if(!b){alert('Betrag eingeben');return;}
+  if(!b){alert('Betrag eingeben');return}
   setSyncStatus('syncing','Speichere...');
+  const data={datum:document.getElementById('kb-d').value,typ:document.getElementById('kb-typ').value,
+    kategorie:document.getElementById('kb-kat').value,beschreibung:document.getElementById('kb-desc').value,
+    betrag:Number(b),bezahlt_von:document.getElementById('kb-von').value,
+    zahlungsart:document.getElementById('kb-zart').value,
+    jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()};
   try{
-    await sbInsert('kassenbuch',{
-      datum:document.getElementById('kb-d').value,
-      typ:document.getElementById('kb-typ').value,
-      kategorie:document.getElementById('kb-kat').value,
-      beschreibung:document.getElementById('kb-desc').value,
-      betrag:Number(b),
-      bezahlt_von:document.getElementById('kb-von').value,
-    });
-    closeModal(); await loadAll();
-  }catch(e){setSyncStatus('error',e.message);}
-}
-async function delKb(id){
-  if(!confirm('Löschen?'))return;
-  setSyncStatus('syncing','Lösche...');
-  try{await sbDelete('kassenbuch',id);await loadAll();}catch(e){setSyncStatus('error',e.message);}
+    if(id!==undefined){await sbUpdate('kassenbuch',id,data);await logActivity('geaendert',data.beschreibung,'kassenbuch',id)}
+    else{const r=await sbInsert('kassenbuch',data);await logActivity('erstellt',data.beschreibung+' '+fmt(Number(b)),'kassenbuch',r[0]?.id)}
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
 }
 
 // ══════════════════════════════════════════════════════════
 // EINKÄUFE
 // ══════════════════════════════════════════════════════════
-function renderEinkaufe() {
-  const total = state.einkaufe.reduce((s,e)=>s+Number(e.betrag),0);
-  const rows = state.einkaufe.map(e=>`
-    <tr>
-      <td>${e.datum}</td><td><strong>${e.markt||'–'}</strong></td>
+function renderEinkaufe(){
+  const hint=`<div class="section-hint">🛒 <strong>Einkäufe</strong>: Einkäufe für die gesamte Gruppe (Lebensmittel, Getränke etc.). Wenn ein Artikel nur für eine Person ist, kann dieser als offener Posten dem Teilnehmer zugeordnet werden. Bezahler erhält eine Gutschrift in der Abrechnung.</div>`;
+  const data=state.einkaufe;
+  const aktiv=data.filter(e=>!e.geloescht);
+  const total=aktiv.reduce((s,e)=>s+Number(e.betrag),0);
+
+  const rows=data.map(e=>`
+    <tr class="${e.geloescht?'geloescht':''}">
+      <td>${e.datum}</td>
+      <td><strong>${e.markt||'–'}</strong></td>
+      <td>${e.produkt||'–'}</td>
       <td>${e.kategorie||'–'}</td>
+      <td>${badge(e.zahlungsart==='Konto'?'🏦':'💵','gray')}</td>
       <td>${badge(fmt(e.betrag),'orange')}</td>
       <td>${e.bezahlt_von||'–'}</td>
-      <td><button class="btn btn-danger" onclick="delEk(${e.id})">✕</button></td>
+      ${e.geaendert_von?`<td style="font-size:11px;color:var(--mu)">✏️ ${e.geaendert_von}</td>`:'<td>–</td>'}
+      <td style="white-space:nowrap">
+        ${canWrite()&&!e.geloescht?`<button class="btn btn-ghost btn-sm" onclick="modalEk(${e.id})" style="margin-right:4px">✏️</button>
+        <button class="btn btn-danger" onclick="confirmDel('einkaufe',${e.id},'${(e.markt||'Einkauf').replace(/'/g,'')}')">✕</button>`:''}
+        ${e.geloescht&&isAdmin()?`<button class="restore-btn" onclick="doRestore('einkaufe',${e.id},'${e.markt||'Einkauf'}')">Wiederherstellen</button>`:''}
+      </td>
     </tr>`).join('');
-  return `
+
+  return`${hint}
     <div class="section-header">
-      <h2>🛒 Einkäufe</h2>
-      <div style="display:flex;gap:8px;align-items:center">
-        ${badge('Gesamt: '+fmt(total),'red')}
-        <button class="btn btn-primary btn-sm" onclick="modalEk()">+ Einkauf</button>
+      <h2>🛒 Einkäufe ${activeYear}</h2>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        ${badge('∑ '+fmt(total),'orange')}
+        ${canWrite()?`<button class="btn btn-primary btn-sm" onclick="modalEk()">+ Einkauf</button>`:''}
       </div>
     </div>
-    ${state.einkaufe.length===0
-      ? `<div class="card empty"><div class="emoji">🛒</div><p>Noch keine Einkäufe</p></div>`
-      : `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
-           <thead><tr>${['Datum','Markt','Kategorie','Betrag','Bezahlt von',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-           <tbody>${rows}</tbody></table></div></div>`}`;
+    ${aktiv.length===0?`<div class="card empty"><div class="emoji">🛒</div><p>Noch keine Einkäufe</p></div>`:
+    `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+      <thead><tr><th>Datum</th><th>Markt</th><th>Produkt</th><th>Kategorie</th><th>Zahlung</th><th>Betrag</th><th>Bezahlt von</th><th>Geändert</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>`}`;
 }
-function modalEk(){
-  const katOpts=KATEGORIEN.map(k=>`<option>${k}</option>`).join('');
-  const tnOpts=state.teilnehmer.map(t=>`<option>${t.name}</option>`).join('');
-  openModal('Einkauf eintragen',`
-    <div class="form-group"><label>Datum</label><input id="ek-d" type="date" value="${today()}"></div>
-    <div class="form-group"><label>Markt / Laden</label><input id="ek-m" placeholder="z.B. Lidl"></div>
-    <div class="form-group"><label>Kategorie</label><select id="ek-kat"><option value="">– auswählen –</option>${katOpts}</select></div>
-    <div class="form-group"><label>Betrag (€) *</label><input id="ek-b" type="number" step="0.01"></div>
-    <div class="form-group"><label>Bezahlt von</label><select id="ek-von"><option value="">– auswählen –</option>${tnOpts}</select></div>
+
+function modalEk(id){
+  const isEdit=id!==undefined;
+  const e=isEdit?state.einkaufe.find(x=>x.id===id):null;
+  const katOpts=KATEGORIEN.map(k=>`<option${isEdit&&e.kategorie===k?' selected':''}>${k}</option>`).join('');
+  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option${isEdit&&e.bezahlt_von===t.name?' selected':''}>${t.name}</option>`).join('');
+  const tnOptsOP=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option>${t.name}</option>`).join('');
+  openModal(isEdit?'Einkauf bearbeiten':'Einkauf eintragen',`
+    <div class="form-row">
+      <div class="form-group"><label>Datum</label><input id="ek-d" type="date" value="${isEdit?(e.datum||today()):today()}"></div>
+      <div class="form-group"><label>Markt / Laden</label><input id="ek-m" value="${isEdit?(e.markt||''):''}" placeholder="z.B. Lidl"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Produkt / Artikel</label><input id="ek-prod" value="${isEdit?(e.produkt||''):''}" placeholder="z.B. Fleisch, Getränke..."></div>
+      <div class="form-group"><label>Kategorie</label><select id="ek-kat"><option value="">– auswählen –</option>${katOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Betrag (€) *</label><input id="ek-b" type="number" step="0.01" value="${isEdit?(e.betrag||''):''}"></div>
+      <div class="form-group"><label>Zahlungsart</label><select id="ek-zart"><option value="Bar"${!isEdit||e.zahlungsart!=='Konto'?' selected':''}>💵 Bar</option><option value="Konto"${isEdit&&e.zahlungsart==='Konto'?' selected':''}>🏦 Konto</option></select></div>
+    </div>
+    <div class="form-group"><label>Bezahlt von (Vorschuss → Gutschrift)</label><select id="ek-von"><option value="">– niemand vorgestreckt –</option>${tnOpts}</select></div>
+    <div style="background:#e3f2fd;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:12px;color:#004085">
+      ℹ️ Optionaler Offener Posten: Wenn ein Produkt nur für eine Person ist, hier zuordnen.
+    </div>
+    <div id="op-section">
+      <div class="form-group"><label>Persönlicher Artikel für Teilnehmer</label><select id="op-tn"><option value="">– kein persönlicher Artikel –</option>${tnOptsOP}</select></div>
+      <div id="op-extra" style="display:none">
+        <div class="form-row">
+          <div class="form-group"><label>Produkt (Offener Posten)</label><input id="op-prod" placeholder="z.B. Medikament"></div>
+          <div class="form-group"><label>Betrag Offener Posten (€)</label><input id="op-bet" type="number" step="0.01"></div>
+        </div>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveEk()">Speichern</button>
+      <button class="btn btn-primary" onclick="saveEk(${isEdit?id:'undefined'})">Speichern</button>
+    </div>`);
+  document.getElementById('op-tn').addEventListener('change',function(){
+    document.getElementById('op-extra').style.display=this.value?'block':'none';
+  });
+}
+
+async function saveEk(id){
+  const b=document.getElementById('ek-b').value;
+  if(!b){alert('Betrag eingeben');return}
+  setSyncStatus('syncing','Speichere...');
+  const data={datum:document.getElementById('ek-d').value,markt:document.getElementById('ek-m').value,
+    produkt:document.getElementById('ek-prod').value,kategorie:document.getElementById('ek-kat').value,
+    betrag:Number(b),bezahlt_von:document.getElementById('ek-von').value,
+    zahlungsart:document.getElementById('ek-zart').value,
+    jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()};
+  try{
+    let ekId=id;
+    if(id!==undefined){await sbUpdate('einkaufe',id,data);await logActivity('geaendert',data.markt,'einkaufe',id)}
+    else{const r=await sbInsert('einkaufe',data);ekId=r[0]?.id;await logActivity('erstellt',data.markt+' '+fmt(Number(b)),'einkaufe',ekId)}
+    // Offener Posten
+    const opTn=document.getElementById('op-tn').value;
+    const opProd=document.getElementById('op-prod')?.value;
+    const opBet=document.getElementById('op-bet')?.value;
+    if(opTn&&opBet&&Number(opBet)>0){
+      await sbInsert('offene_posten',{einkauf_id:ekId,teilnehmer:opTn,produkt:opProd,betrag:Number(opBet),jahr:activeYear});
+      await logActivity('erstellt',`Offener Posten: ${opTn} – ${opProd}`,`offene_posten`,ekId);
+    }
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+async function bezahleOffenenPosten(opId){
+  const op=state.offenePosten.find(o=>o.id===opId);
+  if(!op)return;
+  openModal('Offenen Posten begleichen',`
+    <p style="font-size:14px;margin-bottom:12px"><strong>${op.teilnehmer}</strong> – ${op.produkt||'Artikel'}: ${badge(fmt(op.betrag),'orange')}</p>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:16px">Den Posten als bezahlt markieren?</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmBezahleOP(${opId})">✅ Als bezahlt markieren</button>
     </div>`);
 }
-async function saveEk(){
-  const b=document.getElementById('ek-b').value;
-  if(!b){alert('Betrag eingeben');return;}
+
+async function confirmBezahleOP(opId){
+  setSyncStatus('syncing','Aktualisiere...');
+  try{
+    await sbUpdate('offene_posten',opId,{bezahlt:true,bezahlt_am:new Date().toISOString()});
+    await logActivity('geaendert','Offener Posten bezahlt','offene_posten',opId);
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+// ══════════════════════════════════════════════════════════
+// DUSCHKARTEN
+// ══════════════════════════════════════════════════════════
+function renderDuschkarten(){
+  const dkWert=Number(state.einstellungen.duschkartenWert)||10;
+  const aktiv=state.duschkarten.filter(d=>!d.abgerechnet);
+  const abger=state.duschkarten.filter(d=>d.abgerechnet);
+  const totalVerbraucht=abger.reduce((s,d)=>s+(Number(d.kartenwert||dkWert)-Number(d.restwert||0)),0);
+
+  const kartenHTML=aktiv.length===0?'<p style="color:#999;font-size:13px">Keine aktiven Duschkarten</p>':aktiv.map(d=>`
+    <div class="dk-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:15px">🚿 ${d.teilnehmer}</div>
+          <div style="font-size:12px;color:var(--mu)">Ausgegeben: ${fmtDate(d.ausgegeben_am?.slice(0,10))}</div>
+          <div style="font-size:12px;color:var(--mu)">Kartenwert: ${badge(fmt(d.kartenwert||dkWert),'blue')}</div>
+        </div>
+        ${canWrite()?`<div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-primary" onclick="checkoutDuschkarte(${d.id})">Abreise / Checkout</button>
+          <button class="btn btn-danger" onclick="confirmDel('duschkarten',${d.id},'Duschkarte ${d.teilnehmer}')">✕</button>
+        </div>`:''}
+      </div>
+    </div>`).join('');
+
+  const abgerHTML=abger.length===0?'':abger.map(d=>`
+    <div class="dk-card checkout">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <div>
+          <div style="font-weight:600">✅ ${d.teilnehmer} – abgerechnet</div>
+          <div style="font-size:12px;color:var(--mu)">Kartenwert: ${fmt(d.kartenwert||dkWert)} | Restwert: ${fmt(d.restwert)} | Verbrauch: ${badge(fmt((d.kartenwert||dkWert)-(d.restwert||0)),'red')}</div>
+          <div style="font-size:11px;color:var(--mu)">Checkout: ${fmtDT(d.checkout_am)}</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  return`
+    <div class="section-header">
+      <h2>🚿 Duschkarten ${activeYear}</h2>
+      ${canWrite()?`<button class="btn btn-primary" onclick="modalNewDuschkarte()">+ Karte ausgeben</button>`:''}
+    </div>
+    <div class="card">
+      <h3>ℹ️ So funktioniert die Duschkarten-Abrechnung</h3>
+      <p style="font-size:13px;color:var(--mu);line-height:1.6">
+        Jeder Teilnehmer erhält eine Duschkarte (= Einfahrkarte). Standard-Kartenwert: <strong>${badge(fmt(dkWert),'blue')}</strong><br>
+        Beim <strong>Checkout (Abreise)</strong> gibt der Teilnehmer seinen Restwert an.<br>
+        Der verbrauchte Betrag wird auf alle Teilnehmer anteilig nach Anwesenheitstagen aufgeteilt.<br>
+        Gesamtverbrauch bisher: ${badge(fmt(totalVerbraucht),'red')}
+      </p>
+    </div>
+    <div class="card">
+      <h3>Aktive Duschkarten (${aktiv.length})</h3>
+      ${kartenHTML}
+    </div>
+    ${abger.length>0?`<div class="card"><h3>Abgerechnete Karten (${abger.length})</h3>${abgerHTML}</div>`:''}`;
+}
+
+function modalNewDuschkarte(){
+  const dkWert=Number(state.einstellungen.duschkartenWert)||10;
+  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option>${t.name}</option>`).join('');
+  openModal('Duschkarte ausgeben',`
+    <div class="form-group"><label>Teilnehmer *</label><select id="dk-tn"><option value="">– auswählen –</option>${tnOpts}</select></div>
+    <div class="form-group"><label>Kartenwert (€)</label><input id="dk-wert" type="number" step="0.01" value="${dkWert}"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveDuschkarte()">Ausgeben</button>
+    </div>`);
+}
+
+async function saveDuschkarte(){
+  const tn=document.getElementById('dk-tn').value;
+  const wert=document.getElementById('dk-wert').value;
+  if(!tn){alert('Teilnehmer auswählen');return}
   setSyncStatus('syncing','Speichere...');
   try{
-    await sbInsert('einkaufe',{
-      datum:document.getElementById('ek-d').value,
-      markt:document.getElementById('ek-m').value,
-      kategorie:document.getElementById('ek-kat').value,
-      betrag:Number(b),
-      bezahlt_von:document.getElementById('ek-von').value,
-    });
-    closeModal(); await loadAll();
-  }catch(e){setSyncStatus('error',e.message);}
-}
-async function delEk(id){
-  if(!confirm('Löschen?'))return;
-  setSyncStatus('syncing','Lösche...');
-  try{await sbDelete('einkaufe',id);await loadAll();}catch(e){setSyncStatus('error',e.message);}
+    await sbInsert('duschkarten',{teilnehmer:tn,kartenwert:Number(wert),jahr:activeYear,ausgegeben_am:new Date().toISOString()});
+    await logActivity('erstellt','Duschkarte: '+tn,'duschkarten',null);
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
 }
 
-// ══════════════════════════════════════════════════════════
-// EINSTELLUNGEN
-// ══════════════════════════════════════════════════════════
-function renderEinstellungen() {
-  const e = state.einstellungen;
-  const ptage = state.teilnehmer.reduce((s,t)=>s+(Number(t.tage)||0),0);
-  const totalStrom   = Number(e.stromPreisKwh) * Number(e.stromVerbrauchKwh);
-  const totalCamping = Number(e.campingKostenProPersonTag) * ptage;
-  const totalDusch   = Number(e.duschkartenGesamtkosten) || 0;
-  const duschKptag   = ptage > 0 ? totalDusch / ptage : 0;
-
-  const standplatzTage = Number(e.standplatzGebuehrProTag) || 0;
-  const standplatzAnzahl = Number(e.standplatzAnzahl) || 1;
-  const standplatzRabatt = Number(e.standplatzRabattProzent) || 0;
-  const standplatzBrutto = standplatzTage * standplatzAnzahl;
-  const standplatzNetto = standplatzBrutto * (1 - standplatzRabatt/100);
-
-  return `
-    <div class="section-header"><h2>⚙️ Einstellungen</h2></div>
-
-    <div class="card">
-      <h3>⛺ Standplatzgebühr</h3>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Gebühr pro Standplatz und Tag. Bei mehreren Standplätzen wird mit der Anzahl multipliziert. Rabatt wird auf den Gesamtbetrag angerechnet.</p>
-      <div class="form-group"><label>Gebühr pro Standplatz/Tag (€)</label>
-        <input type="number" step="0.01" placeholder="z.B. 12.00" value="${e.standplatzGebuehrProTag||''}"
-          onchange="saveEinstellung('standplatzGebuehrProTag',this.value)">
-      </div>
-      <div class="form-group"><label>Anzahl Standplätze</label>
-        <input type="number" step="1" min="1" placeholder="z.B. 1" value="${e.standplatzAnzahl||''}"
-          onchange="saveEinstellung('standplatzAnzahl',this.value)">
-      </div>
-      <div class="form-group"><label>Rabatt auf Standplatzgebühr (%)</label>
-        <input type="number" step="0.1" min="0" max="100" placeholder="z.B. 10" value="${e.standplatzRabattProzent||''}"
-          onchange="saveEinstellung('standplatzRabattProzent',this.value)">
-      </div>
-      <div style="background:#f3e5f5;border-radius:10px;padding:12px 16px">
-        <div style="font-size:13px;color:#6a1b9a">Gesamtkosten Standplatz (${standplatzAnzahl}× ${fmt(standplatzTage)}${standplatzRabatt>0?`, ${standplatzRabatt}% Rabatt`:''})</div>
-        <div style="font-size:20px;font-weight:700;color:#6a1b9a">${fmt(standplatzNetto)}</div>
-        ${standplatzRabatt>0?`<div style="font-size:12px;color:#6a1b9a">Brutto ${fmt(standplatzBrutto)} − Rabatt ${fmt(standplatzBrutto-standplatzNetto)}</div>`:''}
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>🏕️ Campingplatz-Kosten (pro Person)</h3>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Kosten pro Person und Tag, anteilig nach Anwesenheitstagen.</p>
-      <div class="form-group"><label>Preis pro Person/Tag (€)</label>
-        <input type="number" step="0.01" placeholder="z.B. 8.50" value="${e.campingKostenProPersonTag||''}"
-          onchange="saveEinstellung('campingKostenProPersonTag',this.value)">
-      </div>
-      <div style="background:var(--green-pale);border-radius:10px;padding:12px 16px">
-        <div style="font-size:13px;color:var(--text-muted)">Gesamtkosten Camping (${ptage} Personentage)</div>
-        <div style="font-size:20px;font-weight:700;color:var(--green-dark)">${fmt(totalCamping)}</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>⚡ Stromkosten</h3>
-      <div class="form-group"><label>Strompreis pro kWh (€)</label>
-        <input type="number" step="0.001" placeholder="z.B. 0.35" value="${e.stromPreisKwh||''}"
-          onchange="saveEinstellung('stromPreisKwh',this.value)">
-      </div>
-      <div class="form-group"><label>Gesamtverbrauch (kWh)</label>
-        <input type="number" step="0.1" placeholder="z.B. 45" value="${e.stromVerbrauchKwh||''}"
-          onchange="saveEinstellung('stromVerbrauchKwh',this.value)">
-      </div>
-      <div style="background:#fff9e6;border-radius:10px;padding:12px 16px">
-        <div style="font-size:13px;color:var(--text-muted)">Gesamtstromkosten</div>
-        <div style="font-size:20px;font-weight:700;color:#856404">${fmt(totalStrom)}</div>
-        ${ptage>0?`<div style="font-size:12px;color:var(--text-muted)">= ${fmt(totalStrom/ptage)} pro Personentag</div>`:''}
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>🚿 Duschkarten</h3>
-      <div class="form-group"><label>Gesamtkosten Duschkarten (€)</label>
-        <input type="number" step="0.01" placeholder="z.B. 30.00" value="${e.duschkartenGesamtkosten||''}"
-          onchange="saveEinstellung('duschkartenGesamtkosten',this.value)">
-      </div>
-      <div style="background:#e3f2fd;border-radius:10px;padding:12px 16px">
-        <div style="font-size:13px;color:#004085">Gesamtkosten Duschkarten</div>
-        <div style="font-size:20px;font-weight:700;color:#004085">${fmt(totalDusch)}</div>
-        ${ptage>0?`<div style="font-size:12px;color:#004085">= ${fmt(duschKptag)} pro Personentag</div>`:''}
-      </div>
-    </div>
-
-    <div class="card" style="background:var(--green-pale)">
-      <h3>📊 Übersicht Zusatzkosten</h3>
-      <table style="width:100%;font-size:14px">
-        <tr><td style="padding:6px 0;color:var(--text-muted)">Standplatzgebühr</td><td style="text-align:right;font-weight:600">${fmt(standplatzNetto)}</td></tr>
-        <tr><td style="padding:6px 0;color:var(--text-muted)">Camping-Kosten (pro Person)</td><td style="text-align:right;font-weight:600">${fmt(totalCamping)}</td></tr>
-        <tr><td style="padding:6px 0;color:var(--text-muted)">Strom-Kosten</td><td style="text-align:right;font-weight:600">${fmt(totalStrom)}</td></tr>
-        <tr><td style="padding:6px 0;color:var(--text-muted)">Duschkarten</td><td style="text-align:right;font-weight:600">${fmt(totalDusch)}</td></tr>
-        <tr style="border-top:2px solid var(--border)">
-          <td style="padding:8px 0 0;font-weight:700">Summe Zusatzkosten</td>
-          <td style="text-align:right;font-weight:700;font-size:16px;padding-top:8px">${fmt(standplatzNetto+totalCamping+totalStrom+totalDusch)}</td>
-        </tr>
-      </table>
-    </div>`;
+function checkoutDuschkarte(id){
+  const d=state.duschkarten.find(x=>x.id===id);
+  const dkWert=Number(state.einstellungen.duschkartenWert)||10;
+  const kw=Number(d.kartenwert||dkWert);
+  openModal(`Checkout: ${d.teilnehmer}`,`
+    <p style="font-size:13px;color:var(--mu);margin-bottom:12px">Kartenwert: <strong>${fmt(kw)}</strong></p>
+    <div class="form-group"><label>Restwert der Karte (€) *</label><input id="dk-rest" type="number" step="0.01" min="0" max="${kw}" placeholder="z.B. 3.20"></div>
+    <div id="dk-verbrauch" style="background:#fce4ec;border-radius:8px;padding:10px;font-size:13px;margin-bottom:12px">Verbrauch wird berechnet...</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveCheckout(${id},${kw})">Abrechnen</button>
+    </div>`);
+  document.getElementById('dk-rest').addEventListener('input',function(){
+    const rest=Number(this.value)||0;
+    const verbrauch=kw-rest;
+    document.getElementById('dk-verbrauch').innerHTML=`Verbrauch: <strong>${fmt(verbrauch)}</strong> – wird anteilig auf alle umgelegt`;
+  });
 }
 
-async function saveEinstellung(key, value) {
+async function saveCheckout(id,kartenwert){
+  const rest=Number(document.getElementById('dk-rest').value);
+  if(isNaN(rest)||rest<0){alert('Restwert eingeben');return}
   setSyncStatus('syncing','Speichere...');
-  try {
-    await sbUpsert('einstellungen', {key, value: String(value)}, 'key');
-    state.einstellungen[key] = value;
-    setSyncStatus('ok',`Gespeichert · ${new Date().toLocaleTimeString('de')}`);
-    renderMain();
-  } catch(e) { setSyncStatus('error',e.message); }
+  try{
+    await sbUpdate('duschkarten',id,{restwert:rest,checkout_am:new Date().toISOString(),abgerechnet:true});
+    await logActivity('geaendert','Duschkarte Checkout','duschkarten',id);
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
 }
 
 // ══════════════════════════════════════════════════════════
 // ABRECHNUNG
 // ══════════════════════════════════════════════════════════
-function renderAbrechnung() {
-  const es = state.einstellungen;
-  const ptage = state.teilnehmer.reduce((s,t)=>s+(Number(t.tage)||0),0);
+function renderAbrechnung(){
+  const es=state.einstellungen;
+  const aktTN=state.teilnehmer.filter(t=>!t.geloescht);
+  const ptage=aktTN.reduce((s,t)=>s+(Number(t.tage)||0),0);
 
-  // Kassenausgaben gesamt
-  const totalKb  = state.kassenbuch.reduce((s,e)=>s+Number(e.betrag),0);
-  const totalEk  = state.einkaufe.reduce((s,e)=>s+Number(e.betrag),0);
-  const totalAus = totalKb + totalEk;
+  // Standplatz: berechne Tage anhand des längst anwesenden Teilnehmers
+  const spAnreise=es.standplatzAnreise;
+  const spAbreise=es.standplatzAbreise;
+  let spTage=0;
+  if(spAnreise&&spAbreise){spTage=daysBetween(spAnreise,spAbreise)}
+  else if(aktTN.length){
+    // Fallback: längste Anwesenheit
+    const anreisen=aktTN.map(t=>t.anreise).filter(Boolean).sort();
+    const abreisen=aktTN.map(t=>t.abreise).filter(Boolean).sort().reverse();
+    if(anreisen.length&&abreisen.length)spTage=daysBetween(anreisen[0],abreisen[0]);
+  }
 
-  // Fahrzeugkosten gesamt (Fixkosten)
-  const fzKosten = state.fahrzeuge.reduce((s,f)=>s+Number(f.kosten||0),0);
+  const spProTag=Number(es.standplatzGebuehrProTag)||0;
+  const spAnzahl=Number(es.standplatzAnzahl)||1;
+  const spRabatt=Number(es.standplatzRabattProzent)||0;
+  const spGesamt=spProTag*spAnzahl*spTage*(1-spRabatt/100);
+  const spKptag=ptage>0?spGesamt/ptage:0;
 
-  // Standplatz
-  const standplatzProTag  = Number(es.standplatzGebuehrProTag)||0;
-  const standplatzAnzahl  = Number(es.standplatzAnzahl)||1;
-  const standplatzRabatt  = Number(es.standplatzRabattProzent)||0;
-  const standplatzGesamt  = standplatzProTag * standplatzAnzahl * (1 - standplatzRabatt/100);
-  const standplatzKptag   = ptage>0 ? standplatzGesamt/ptage : 0;
+  const campingKptag=Number(es.campingKostenProPersonTag)||0;
+  const totalStrom=(Number(es.stromPreisKwh)||0)*(Number(es.stromVerbrauchKwh)||0);
+  const stromKptag=ptage>0?totalStrom/ptage:0;
 
-  // Weitere Kosten pro Personentag
-  const campingKptag = Number(es.campingKostenProPersonTag)||0;
-  const totalStrom   = (Number(es.stromPreisKwh)||0)*(Number(es.stromVerbrauchKwh)||0);
-  const stromKptag   = ptage>0 ? totalStrom/ptage : 0;
-  const totalDusch   = Number(es.duschkartenGesamtkosten)||0;
-  const duschKptag   = ptage>0 ? totalDusch/ptage : 0;
+  // Duschkarten-Gesamtverbrauch (abgerechnete Karten)
+  const dkVerbrauch=state.duschkarten.filter(d=>d.abgerechnet).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
+  const dkKptag=ptage>0?dkVerbrauch/ptage:0;
 
-  // Gemeinschaftskosten aus Kasse (ohne Fahrzeugkosten) pro Tag
-  const gemKosten = totalAus - fzKosten;
-  const kpt       = ptage>0 ? gemKosten/ptage : 0;
+  const totalKb=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+  const totalEk=state.einkaufe.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+  const totalAus=totalKb+totalEk;
+  const fzAufteilen=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart!=='einzeln'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
+  const gemKosten=totalAus-state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
+  const kpt=ptage>0?gemKosten/ptage:0;
+  const gesamtGesamt=totalAus+spGesamt+campingKptag*ptage+totalStrom+dkVerbrauch;
 
-  // Gesamtkosten
-  const gesamtGesamt = totalAus + standplatzGesamt + campingKptag*ptage + totalStrom + totalDusch;
-  const gesamtKptag  = kpt + standplatzKptag + campingKptag + stromKptag + duschKptag;
-
-  const tiles = [
-    {val:fmt(totalAus),           lbl:'Kassenausgaben',       bg:'#fce4ec'},
-    {val:fmt(standplatzGesamt),   lbl:'Standplatzgebühr',     bg:'#f3e5f5'},
-    {val:fmt(campingKptag*ptage), lbl:'Camping (pro Person)', bg:'#fff3e0'},
-    {val:fmt(totalStrom),         lbl:'Stromkosten',          bg:'#fff9e6'},
-    {val:fmt(totalDusch),         lbl:'Duschkarten',          bg:'#e3f2fd'},
-    {val:fmt(gesamtGesamt),       lbl:'Gesamtkosten',         bg:'#e8f5e9'},
-    {val:fmt(gesamtKptag),        lbl:'Kosten/Tag/Person',    bg:'#f0f7f0'},
-    {val:ptage,                   lbl:'Personentage',         bg:'#e0f2e9'},
+  const tiles=[
+    {val:fmt(totalAus),lbl:'Kassenausgaben',bg:'#fce4ec'},
+    {val:`${spProTag>0?fmt(spGesamt):'–'} (${spTage} T)`,lbl:'Standplatz',bg:'#f3e5f5'},
+    {val:fmt(campingKptag*ptage),lbl:'Camping',bg:'#fff3e0'},
+    {val:fmt(totalStrom),lbl:'Strom',bg:'#fff9e6'},
+    {val:fmt(dkVerbrauch),lbl:'Duschkarten',bg:'#e3f2fd'},
+    {val:fmt(gesamtGesamt),lbl:'Gesamtkosten',bg:'#e8f5e9'},
+    {val:ptage+' T',lbl:'Personentage',bg:'#f0f7f0'},
   ];
 
-  // Pro Teilnehmer
-  const abr = state.teilnehmer.map(t => {
-    const tage = Number(t.tage)||0;
-    const eingezahlt = state.einzahlungen
-      .filter(e=>e.teilnehmer===t.name).reduce((s,e)=>s+Number(e.betrag),0);
-    const fzk = state.fahrzeuge
-      .filter(f=>f.halter===t.fahrzeughalter||f.halter===t.name)
-      .reduce((s,f)=>s+Number(f.kosten||0),0);
-    // Vorgestreckte Einkäufe & Kassenausgaben werden gutgeschrieben
-    const vorEk = state.einkaufe
-      .filter(e=>e.bezahlt_von===t.name).reduce((s,e)=>s+Number(e.betrag),0);
-    const vorKb = state.kassenbuch
-      .filter(e=>e.bezahlt_von===t.name&&e.typ==='Ausgabe').reduce((s,e)=>s+Number(e.betrag),0);
-    const gutschrift = vorEk + vorKb;
-    const gk       = tage*kpt;
-    const standK   = tage*standplatzKptag;
-    const campingK = tage*campingKptag;
-    const stromK   = tage*stromKptag;
-    const duschK   = tage*duschKptag;
-    const soll     = gk + fzk + standK + campingK + stromK + duschK - gutschrift;
-    const saldo    = eingezahlt - soll;
-    return {name:t.name, tage, gk, fzk, standK, campingK, stromK, duschK, gutschrift, soll, eingezahlt, saldo};
+  const abr=aktTN.map(t=>{
+    const tage=Number(t.tage)||0;
+    const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name).reduce((s,e)=>s+Number(e.betrag),0);
+    // Einzeln abzurechnende Fahrzeugkosten
+    const fzEinzeln=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug&&f.halter===t.name).reduce((s,f)=>s+Number(f.kosten||0),0);
+    // Aufzuteilende Fahrzeugkosten anteilig
+    const fzAnteil=ptage>0?(fzAufteilen/ptage)*tage:0;
+    // Vorgestreckte Einkäufe und Kassenbuch-Ausgaben
+    const gutschrift=state.einkaufe.filter(e=>!e.geloescht&&e.bezahlt_von===t.name).reduce((s,e)=>s+Number(e.betrag),0)
+                   +state.kassenbuch.filter(e=>!e.geloescht&&e.bezahlt_von===t.name&&e.typ==='Ausgabe').reduce((s,e)=>s+Number(e.betrag),0);
+    // Bezahlte offene Posten durch Saldo
+    const opBezahlt=state.offenePosten.filter(o=>o.bezahlt&&o.teilnehmer===t.name).reduce((s,o)=>s+Number(o.betrag),0);
+    const gk=tage*kpt;
+    const standK=tage*spKptag;
+    const campK=tage*campingKptag;
+    const stromK=tage*stromKptag;
+    const dkK=tage*dkKptag;
+    const soll=gk+fzEinzeln+fzAnteil+standK+campK+stromK+dkK-gutschrift;
+    const saldo=eingezahlt-soll;
+    // Offene Posten für diesen Teilnehmer (unbezahlt)
+    const opOffen=state.offenePosten.filter(o=>!o.bezahlt&&o.teilnehmer===t.name);
+    return{name:t.name,tage,gk,fzEinzeln,fzAnteil,standK,campK,stromK,dkK,gutschrift,opBezahlt,soll,eingezahlt,saldo,opOffen};
   });
 
-  const tableRows = abr.map(a=>`
+  const tableRows=abr.map(a=>`
     <tr>
-      <td><strong>${a.name}</strong></td>
+      <td><strong>${a.name}</strong>${a.opOffen.length>0?`<div style="font-size:11px;color:var(--or)">⚠️ ${a.opOffen.length} offener Posten</div>`:''}</td>
       <td style="text-align:center">${a.tage}</td>
-      <td>${fmt(a.gk)}</td><td>${fmt(a.fzk)}</td>
-      <td>${fmt(a.standK)}</td><td>${fmt(a.campingK)}</td>
-      <td>${fmt(a.stromK)}</td><td>${fmt(a.duschK)}</td>
-      <td style="color:#2d6a2d;font-weight:600">${a.gutschrift>0?'−'+fmt(a.gutschrift):'–'}</td>
-      <td><strong>${fmt(a.soll)}</strong></td>
-      <td>${fmt(a.eingezahlt)}</td>
+      <td>${fmt(a.gk)}</td><td>${fmt(a.fzAnteil)}</td><td>${fmt(a.fzEinzeln)}</td>
+      <td>${fmt(a.standK)}</td><td>${fmt(a.campK)}</td><td>${fmt(a.stromK)}</td><td>${fmt(a.dkK)}</td>
+      <td style="color:var(--gm);font-weight:600">${a.gutschrift>0?'−'+fmt(a.gutschrift):'–'}</td>
+      <td><strong>${fmt(a.soll)}</strong></td><td>${fmt(a.eingezahlt)}</td>
       <td>${badge((a.saldo>=0?'+':'')+fmt(a.saldo),a.saldo>=0?'green':'red')}</td>
+      <td>
+        ${a.saldo>0.01&&a.opOffen.length>0?`<button class="btn btn-sm btn-primary" onclick="saldoFuerOP('${a.name}',${a.saldo})">Saldo nutzen</button>`:''}
+      </td>
     </tr>`).join('');
 
-  const owes = abr.filter(a=>a.saldo<-0.01);
-  const gets = abr.filter(a=>a.saldo>0.01);
-  const payHTML = owes.length===0
-    ? `<div style="color:var(--green-mid);font-weight:600;padding:10px">✅ Alle Konten sind ausgeglichen!</div>`
-    : owes.map(a=>`<div class="payment-row owes"><strong>${a.name}</strong> muss noch ${badge(fmt(Math.abs(a.saldo)),'red')} zahlen</div>`).join('')
-    + gets.map(a=>`<div class="payment-row gets"><strong>${a.name}</strong> bekommt zurück: ${badge(fmt(a.saldo),'green')}</div>`).join('');
+  const owes=abr.filter(a=>a.saldo<-0.01);
+  const gets=abr.filter(a=>a.saldo>0.01);
+  const payHTML=owes.length===0
+    ?`<div style="color:var(--gm);font-weight:600;padding:10px">✅ Alle Konten ausgeglichen!</div>`
+    :owes.map(a=>`<div class="payment-row owes"><strong>${a.name}</strong> muss noch ${badge(fmt(Math.abs(a.saldo)),'red')} zahlen</div>`).join('')
+    +gets.map(a=>`<div class="payment-row gets"><strong>${a.name}</strong> bekommt zurück: ${badge(fmt(a.saldo),'green')}</div>`).join('');
 
-  const hinweis = (standplatzProTag===0&&campingKptag===0&&totalStrom===0&&totalDusch===0)
-    ? `<div style="background:#fff9e6;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#856404">
-        💡 Standplatz, Camping, Strom und Duschkarten noch nicht eingetragen –
-        <button onclick="switchTab('einstellungen')" style="background:none;border:none;color:var(--green-mid);font-weight:700;cursor:pointer;font-size:13px;text-decoration:underline">Jetzt eintragen →</button>
-       </div>` : '';
-
-  const gutschriftHinweis = abr.some(a=>a.gutschrift>0)
-    ? `<div style="background:#e8f5e9;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--green-dark)">
-        ✅ Vorgestreckte Einkäufe &amp; Ausgaben wurden als Gutschrift vom Gesamtsoll abgezogen.
-       </div>` : '';
-
-  return `
-    <h2 style="font-family:'Playfair Display',serif;color:var(--green-dark);margin-bottom:18px">📋 Abrechnung</h2>
-    ${hinweis}${gutschriftHinweis}
+  return`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <h2 style="font-family:'Playfair Display',serif;color:var(--gd)">📋 Abrechnung ${activeYear}</h2>
+      <button class="btn btn-ghost btn-sm" onclick="printAbrechnung()">🖨️ Drucken</button>
+    </div>
+    ${spProTag>0?`<div class="section-hint">⛺ Standplatz: ${spAnzahl}× ${fmt(spProTag)}/Tag × ${spTage} Tage${spRabatt>0?` − ${spRabatt}% Rabatt`:''} = <strong>${fmt(spGesamt)}</strong></div>`:''}
     <div class="summary-grid">${tiles.map(t=>`<div class="summary-tile" style="background:${t.bg}"><div class="s-val">${t.val}</div><div class="s-lbl">${t.lbl}</div></div>`).join('')}</div>
-    ${abr.length===0
-      ? `<div class="card empty"><p>Füge Teilnehmer hinzu, um die Abrechnung zu sehen.</p></div>`
-      : `<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
-           <div style="padding:16px 18px 12px">
-             <h3>Individuelle Abrechnung</h3>
-             <p style="font-size:12px;color:var(--text-muted);margin-top:4px">Gutschrift = vorgestreckte Einkäufe &amp; Kassenausgaben des Teilnehmers</p>
-           </div>
-           <div class="table-wrap"><table>
-             <thead><tr>${['Name','Tage','Gemeinschaft','Fahrzeug','Standplatz','Camping','Strom','Dusche','Gutschrift','Gesamtsoll','Eingezahlt','Saldo'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-             <tbody>${tableRows}</tbody>
-           </table></div>
-         </div>
-         <div class="card"><h3>💸 Zahlungsausgleich</h3>${payHTML}</div>`}`;
+    ${abr.length===0?`<div class="card empty"><p>Noch keine Teilnehmer</p></div>`:`
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 16px 10px"><h3>Individuelle Abrechnung</h3>
+      <p style="font-size:11px;color:var(--mu)">Gutschrift = vorgestreckte Einkäufe &amp; Ausgaben des Teilnehmers</p></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Tage</th><th>Gemeinsch.</th><th>Fz. (anteil.)</th><th>Fz. (einzeln)</th><th>Standpl.</th><th>Camping</th><th>Strom</th><th>Dusche</th><th>Gutschr.</th><th>Gesamtsoll</th><th>Eingezahlt</th><th>Saldo</th><th></th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table></div>
+    </div>
+    <div class="card"><h3>💸 Zahlungsausgleich</h3>${payHTML}</div>`}`;
+}
+
+function saldoFuerOP(name,saldo){
+  const opOffen=state.offenePosten.filter(o=>!o.bezahlt&&o.teilnehmer===name);
+  openModal(`Saldo nutzen – ${name}`,`
+    <p style="font-size:13px;margin-bottom:12px">Verfügbares Saldo: ${badge(fmt(saldo),'green')}</p>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:12px">Welchen offenen Posten möchtest du damit bezahlen?</p>
+    ${opOffen.map(o=>`
+      <div class="op-card" style="margin-bottom:8px">
+        <div style="flex:1"><strong>${o.produkt||'Artikel'}</strong><br><span style="font-size:12px;color:var(--mu)">${fmt(o.betrag)}</span></div>
+        ${o.betrag<=saldo?`<button class="btn btn-sm btn-primary" onclick="confirmBezahleOP(${o.id});closeModal()">Mit Saldo bezahlen</button>`:badge('Saldo zu gering','red')}
+      </div>`).join('')}
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Schließen</button></div>`);
 }
 
 // ══════════════════════════════════════════════════════════
-// CONFIG MODAL (Supabase-Zugangsdaten ändern)
+// EINSTELLUNGEN
 // ══════════════════════════════════════════════════════════
-function openConfigModal() {
-  openModal('⚙️ Supabase-Verbindung', `
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Zugangsdaten ändern oder neu verbinden.</p>
-    <div class="form-group"><label>Supabase URL</label>
-      <input id="cfg-url" value="${SUPA_URL}" type="url">
+function renderEinstellungen(){
+  const es=state.einstellungen;
+  const ptage=state.teilnehmer.filter(t=>!t.geloescht).reduce((s,t)=>s+(Number(t.tage)||0),0);
+
+  // Standplatz-Tage berechnen
+  let spTage=0;
+  if(es.standplatzAnreise&&es.standplatzAbreise)spTage=daysBetween(es.standplatzAnreise,es.standplatzAbreise);
+  const spProTag=Number(es.standplatzGebuehrProTag)||0;
+  const spAnzahl=Number(es.standplatzAnzahl)||1;
+  const spRabatt=Number(es.standplatzRabattProzent)||0;
+  const spGesamt=spProTag*spAnzahl*spTage*(1-spRabatt/100);
+  const spBrutto=spProTag*spAnzahl*spTage;
+
+  const totalStrom=(Number(es.stromPreisKwh)||0)*(Number(es.stromVerbrauchKwh)||0);
+  const totalCamping=(Number(es.campingKostenProPersonTag)||0)*ptage;
+  const dkWert=Number(es.duschkartenWert)||10;
+
+  const jahrButtons=state.jahre.map(j=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-weight:600">${j.jahr}</span>
+      <span style="font-size:12px;color:var(--mu)">${j.bezeichnung||''}</span>
+      ${j.aktiv?badge('Aktiv','green'):''}
+      ${isAdmin()?`<button class="btn btn-sm btn-ghost" onclick="setAktivesJahr(${j.id},${j.jahr})">Aktivieren</button>`:''}
+    </div>`).join('');
+
+  return`
+    <div class="section-header"><h2>⚙️ Einstellungen</h2></div>
+    ${isAdmin()?`
+    <div class="card">
+      <h3>📅 Jahresverwaltung</h3>
+      ${jahrButtons}
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="margin:0;flex:1"><label>Neues Jahr</label><input id="new-jahr" type="number" placeholder="z.B. 2026" style="width:140px"></div>
+        <div class="form-group" style="margin:0;flex:2"><label>Bezeichnung</label><input id="new-jahr-bez" placeholder="z.B. Camping Zinnowitz 2026"></div>
+        <button class="btn btn-primary btn-sm" onclick="addJahr()">+ Anlegen</button>
+      </div>
+    </div>`:''}
+
+    <div class="card">
+      <h3>⛺ Standplatzgebühr</h3>
+      ${(()=>{const spFz=state.fahrzeuge.find(f=>f.standplatz_fahrzeug&&!f.geloescht);return spFz?`<div style="background:#e8f5e9;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px;color:var(--gd)">🅿️ Kostenloses Standplatz-Fahrzeug: <strong>${spFz.halter}</strong> (${spFz.typ||'Fahrzeug'})</div>`:'<div style="background:#fff9e6;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px;color:#856404">⚠️ Noch kein kostenloses Standplatz-Fahrzeug definiert (bei Fahrzeuge einstellen)</div>'})()}
+      <div class="form-row">
+        <div class="form-group"><label>Anreise Standplatz</label><input type="date" id="sp-an" value="${es.standplatzAnreise||''}" onchange="saveEinstellung('standplatzAnreise',this.value)"></div>
+        <div class="form-group"><label>Abreise Standplatz</label><input type="date" id="sp-ab" value="${es.standplatzAbreise||''}" onchange="saveEinstellung('standplatzAbreise',this.value)"></div>
+      </div>
+      <div style="background:#f3e5f5;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px;color:var(--pu)">
+        📅 Berechnete Standplatztage: <strong>${spTage} Tage</strong>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Preis pro Standplatz/Tag (€)</label><input type="number" step="0.01" value="${es.standplatzGebuehrProTag||''}" onchange="saveEinstellung('standplatzGebuehrProTag',this.value)"></div>
+        <div class="form-group"><label>Anzahl Standplätze</label><input type="number" step="1" min="1" value="${es.standplatzAnzahl||1}" onchange="saveEinstellung('standplatzAnzahl',this.value)"></div>
+      </div>
+      <div class="form-group"><label>Rabatt (%)</label><input type="number" step="0.1" min="0" max="100" value="${es.standplatzRabattProzent||''}" onchange="saveEinstellung('standplatzRabattProzent',this.value)"></div>
+      <div style="background:#f3e5f5;border-radius:8px;padding:10px 12px;font-size:13px;color:var(--pu)">
+        ${spAnzahl}× ${fmt(spProTag)}/Tag × ${spTage} Tage${spRabatt>0?` − ${spRabatt}% = Brutto ${fmt(spBrutto)}, Netto`:''}: <strong>${fmt(spGesamt)}</strong>
+      </div>
     </div>
-    <div class="form-group"><label>Supabase anon Key</label>
-      <input id="cfg-key" value="${SUPA_KEY}" type="password">
+
+    <div class="card">
+      <h3>🏕️ Campingplatz-Kosten (pro Person)</h3>
+      <div class="form-group"><label>Preis pro Person/Tag (€)</label><input type="number" step="0.01" value="${es.campingKostenProPersonTag||''}" onchange="saveEinstellung('campingKostenProPersonTag',this.value)"></div>
+      <div style="background:var(--gp);border-radius:8px;padding:10px 12px;font-size:13px">Gesamt: <strong>${fmt(totalCamping)}</strong> (${ptage} Personentage)</div>
+    </div>
+
+    <div class="card">
+      <h3>⚡ Stromkosten</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Preis/kWh (€)</label><input type="number" step="0.001" value="${es.stromPreisKwh||''}" onchange="saveEinstellung('stromPreisKwh',this.value)"></div>
+        <div class="form-group"><label>Verbrauch (kWh)</label><input type="number" step="0.1" value="${es.stromVerbrauchKwh||''}" onchange="saveEinstellung('stromVerbrauchKwh',this.value)"></div>
+      </div>
+      <div style="background:#fff9e6;border-radius:8px;padding:10px 12px;font-size:13px">Gesamt: <strong>${fmt(totalStrom)}</strong>${ptage>0?` = ${fmt(totalStrom/ptage)}/Personentag`:''}</div>
+    </div>
+
+    <div class="card">
+      <h3>🚿 Duschkarten-Einstellungen</h3>
+      <div class="form-group"><label>Standard-Kartenwert (€)</label><input type="number" step="0.01" value="${dkWert}" onchange="saveEinstellung('duschkartenWert',this.value)"></div>
+    </div>
+
+    <div class="card">
+      <h3>🔑 Mein Passwort ändern</h3>
+      <div class="form-group"><label>Neues Passwort</label><input type="password" id="my-pw-new" placeholder="Neues Passwort"></div>
+      <div class="form-group"><label>Wiederholen</label><input type="password" id="my-pw-rep" placeholder="••••••"></div>
+      <button class="btn btn-primary btn-sm" onclick="changeMyPw()">Passwort aktualisieren</button>
+      <p id="my-pw-msg" style="font-size:12px;margin-top:8px;display:none"></p>
+    </div>`;
+}
+
+async function changeMyPw(){
+  const n=document.getElementById('my-pw-new').value;
+  const r=document.getElementById('my-pw-rep').value;
+  const msg=document.getElementById('my-pw-msg');
+  if(n.length<4){msg.textContent='Mindestens 4 Zeichen';msg.style.color='var(--red)';msg.style.display='block';return}
+  if(n!==r){msg.textContent='Passwörter stimmen nicht überein';msg.style.color='var(--red)';msg.style.display='block';return}
+  try{
+    const h=await hashPw(n);
+    await sbUpdate('benutzer',currentUser.id,{password_hash:h,muss_pw_aendern:false});
+    msg.textContent='✅ Passwort geändert!';msg.style.color='var(--gm)';msg.style.display='block';
+    await logActivity('geaendert','Passwort geändert','benutzer',currentUser.id);
+  }catch(e){msg.textContent='Fehler: '+e.message;msg.style.color='var(--red)';msg.style.display='block'}
+}
+
+async function saveEinstellung(key,value){
+  setSyncStatus('syncing','Speichere...');
+  try{
+    await sbUpsert('einstellungen',{key,value:String(value)},'key');
+    state.einstellungen[key]=isNaN(value)?value:Number(value);
+    setSyncStatus('ok','Gespeichert · '+new Date().toLocaleTimeString('de'));
+    renderMain();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+async function addJahr(){
+  const j=document.getElementById('new-jahr').value;
+  const b=document.getElementById('new-jahr-bez').value;
+  if(!j){alert('Jahr eingeben');return}
+  setSyncStatus('syncing','Speichere...');
+  try{
+    await sbInsert('jahre',{jahr:Number(j),bezeichnung:b,aktiv:false});
+    await logActivity('erstellt','Jahr '+j,'jahre',null);
+    await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+async function setAktivesJahr(id,jahr){
+  setSyncStatus('syncing','...');
+  try{
+    // Alle auf false, dann dieses auf true
+    for(const j of state.jahre)await sbUpdate('jahre',j.id,{aktiv:j.id===id});
+    await sbUpsert('einstellungen',{key:'aktuellesJahr',value:String(jahr)},'key');
+    activeYear=jahr;await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+// ══════════════════════════════════════════════════════════
+// BENUTZERVERWALTUNG (nur Admin)
+// ══════════════════════════════════════════════════════════
+function renderBenutzer(){
+  if(!isAdmin())return`<div class="card empty"><p>Kein Zugriff</p></div>`;
+  const rows=state.benutzer.map(u=>`
+    <tr>
+      <td><strong>${u.username}</strong></td>
+      <td>${u.vorname||''} ${u.nachname||''}</td>
+      <td>${badge(u.rolle==='admin'?'Admin':'User',u.rolle==='admin'?'orange':'blue')}</td>
+      <td>${u.muss_pw_aendern?badge('Muss ändern','red'):badge('OK','green')}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="modalBenutzer(${u.id})" style="margin-right:4px">✏️</button>
+        ${u.id!==currentUser.id?`<button class="btn btn-danger" onclick="delBenutzer(${u.id},'${u.username}')">✕</button>`:''}
+      </td>
+    </tr>`).join('');
+
+  return`
+    <div class="section-header">
+      <h2>👤 Benutzerverwaltung</h2>
+      <button class="btn btn-primary" onclick="modalBenutzer()">+ Neuer Benutzer</button>
+    </div>
+    <div class="section-hint">🔐 Nur Admins sehen diesen Bereich. Benutzer mit Rolle "User" können nur lesen, nicht bearbeiten.</div>
+    <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+      <thead><tr><th>Username</th><th>Name</th><th>Rolle</th><th>Passwort</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div></div>`;
+}
+
+function modalBenutzer(id){
+  const isEdit=id!==undefined;
+  const u=isEdit?state.benutzer.find(x=>x.id===id):null;
+  openModal(isEdit?'Benutzer bearbeiten':'Neuer Benutzer',`
+    <div class="form-row">
+      <div class="form-group"><label>Vorname</label><input id="bu-vn" value="${isEdit?(u.vorname||''):''}"></div>
+      <div class="form-group"><label>Nachname</label><input id="bu-nn" value="${isEdit?(u.nachname||''):''}"></div>
+    </div>
+    <div class="form-group"><label>Benutzername *</label><input id="bu-un" value="${isEdit?u.username:''}" placeholder="z.B. MaxM"></div>
+    <div class="form-group"><label>Einmalpasswort ${isEdit?'(leer lassen = unverändert)':' *'}</label><input id="bu-pw" type="password" placeholder="${isEdit?'Nur ausfüllen wenn ändern':'Einmalpasswort'}"></div>
+    <div class="form-group"><label>Rolle</label>
+      <select id="bu-rolle"><option value="admin"${isEdit&&u.rolle==='admin'?' selected':''}>👑 Admin (Erstellen/Bearbeiten/Löschen)</option><option value="user"${isEdit&&u.rolle==='user'?' selected':''}>👁️ User (nur Lesen)</option></select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="updateConfig()">Verbinden</button>
+      <button class="btn btn-primary" onclick="saveBenutzer(${isEdit?id:'undefined'})">Speichern</button>
     </div>`);
 }
-function updateConfig() {
-  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/,'');
-  const key = document.getElementById('cfg-key').value.trim();
-  if(!url||!key){alert('Beide Felder ausfüllen');return;}
-  localStorage.setItem('supa_url',url);
-  localStorage.setItem('supa_key',key);
-  SUPA_URL=url; SUPA_KEY=key;
-  closeModal(); loadAll();
+
+async function saveBenutzer(id){
+  const un=document.getElementById('bu-un').value.trim();
+  const pw=document.getElementById('bu-pw').value;
+  if(!un){alert('Benutzername eingeben');return}
+  setSyncStatus('syncing','Speichere...');
+  const data={username:un,vorname:document.getElementById('bu-vn').value,
+    nachname:document.getElementById('bu-nn').value,rolle:document.getElementById('bu-rolle').value};
+  try{
+    if(id!==undefined){
+      if(pw)data.password_hash=`PLAIN:${pw}`,data.muss_pw_aendern=true;
+      await sbUpdate('benutzer',id,data);await logActivity('geaendert',un,'benutzer',id);
+    }else{
+      if(!pw){alert('Einmalpasswort eingeben');return}
+      data.password_hash=`PLAIN:${pw}`;data.muss_pw_aendern=true;
+      const r=await sbInsert('benutzer',data);await logActivity('erstellt',un,'benutzer',r[0]?.id);
+    }
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+async function delBenutzer(id,username){
+  if(!confirm(`Benutzer "${username}" wirklich löschen?`))return;
+  setSyncStatus('syncing','Lösche...');
+  try{await sbDelete('benutzer',id);await logActivity('geloescht',username,'benutzer',id);await loadAll()}catch(e){setSyncStatus('error',e.message)}
+}
+
+
+// ══════════════════════════════════════════════════════════
+// JAHRESVERGLEICH
+// ══════════════════════════════════════════════════════════
+async function renderJahresvergleich(){
+  // Lade alle Jahre und deren Daten parallel
+  const jahre=state.jahre;
+  if(jahre.length===0) return`<div class="card empty"><div class="emoji">📅</div><p>Noch keine Jahre angelegt.</p></div>`;
+
+  // Lade Daten für alle Jahre
+  let allData={};
+  try{
+    await Promise.all(jahre.map(async j=>{
+      const [tn,ez,kb,ek]=await Promise.all([
+        sbGet('teilnehmer','jahr=eq.'+j.jahr),
+        sbGet('einzahlungen','jahr=eq.'+j.jahr),
+        sbGet('kassenbuch','jahr=eq.'+j.jahr),
+        sbGet('einkaufe','jahr=eq.'+j.jahr),
+      ]);
+      allData[j.jahr]={tn,ez,kb,ek};
+    }));
+  }catch(e){return`<div class="card"><p style="color:var(--red)">Fehler beim Laden: ${e.message}</p></div>`;}
+
+  const rows=jahre.map(j=>{
+    const d=allData[j.jahr]||{tn:[],ez:[],kb:[],ek:[]};
+    const tnAktiv=d.tn.filter(t=>!t.geloescht);
+    const ptage=tnAktiv.reduce((s,t)=>s+(Number(t.tage)||0),0);
+    const einzahlungen=d.ez.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+    const ausgaben=d.kb.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0)
+                  +d.ek.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+    const saldo=einzahlungen-ausgaben;
+    return`<tr>
+      <td><strong>${j.jahr}</strong>${j.aktiv?` ${badge('Aktiv','green')}`:''}</td>
+      <td>${j.bezeichnung||'–'}</td>
+      <td style="text-align:center">${tnAktiv.length}</td>
+      <td style="text-align:center">${ptage}</td>
+      <td>${badge(fmt(einzahlungen),'green')}</td>
+      <td>${badge(fmt(ausgaben),'red')}</td>
+      <td>${badge((saldo>=0?'+':'')+fmt(saldo),saldo>=0?'green':'red')}</td>
+      <td>${tnAktiv.length>0?tnAktiv.map(t=>'<span style="font-size:11px;background:var(--gp);padding:1px 5px;border-radius:8px;margin:1px;display:inline-block">'+t.name+'</span>').join(''):'–'}</td>
+    </tr>`;
+  }).join('');
+
+  return`
+    <h2 style="font-family:'Playfair Display',serif;color:var(--gd);margin-bottom:16px">📈 Jahresvergleich</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Jahr</th><th>Bezeichnung</th><th>Teilnehmer</th><th>Personentage</th>
+          <th>Einzahlungen</th><th>Ausgaben</th><th>Saldo</th><th>Teilnehmer</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
 }
 
 // ══════════════════════════════════════════════════════════
-// INIT
+// DRUCKEN
 // ══════════════════════════════════════════════════════════
-async function initApp() {
-  renderNav();
-  renderMain();
-  await loadAll();
-  startAutoRefresh();
+function printAbrechnung(){
+  const es=state.einstellungen;
+  const aktTN=state.teilnehmer.filter(t=>!t.geloescht);
+  const ptage=aktTN.reduce((s,t)=>s+(Number(t.tage)||0),0);
+
+  let spTage=0;
+  const spAnreise=es.standplatzAnreise,spAbreise=es.standplatzAbreise;
+  if(spAnreise&&spAbreise)spTage=daysBetween(spAnreise,spAbreise);
+  const spProTag=Number(es.standplatzGebuehrProTag)||0;
+  const spAnzahl=Number(es.standplatzAnzahl)||1;
+  const spRabatt=Number(es.standplatzRabattProzent)||0;
+  const spGesamt=spProTag*spAnzahl*spTage*(1-spRabatt/100);
+  const spKptag=ptage>0?spGesamt/ptage:0;
+  const campingKptag=Number(es.campingKostenProPersonTag)||0;
+  const totalStrom=(Number(es.stromPreisKwh)||0)*(Number(es.stromVerbrauchKwh)||0);
+  const stromKptag=ptage>0?totalStrom/ptage:0;
+  const dkVerbrauch=state.duschkarten.filter(d=>d.abgerechnet).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
+  const dkKptag=ptage>0?dkVerbrauch/ptage:0;
+  const totalKb=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+  const totalEk=state.einkaufe.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
+  const totalAus=totalKb+totalEk;
+  const fzAufteilen=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart!=='einzeln'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
+  const gemKosten=totalAus-state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
+  const kpt=ptage>0?gemKosten/ptage:0;
+
+  const abr=aktTN.map(t=>{
+    const tage=Number(t.tage)||0;
+    const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name).reduce((s,e)=>s+Number(e.betrag),0);
+    const fzEinzeln=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug&&f.halter===t.name).reduce((s,f)=>s+Number(f.kosten||0),0);
+    const fzAnteil=ptage>0?(fzAufteilen/ptage)*tage:0;
+    const gutschrift=state.einkaufe.filter(e=>!e.geloescht&&e.bezahlt_von===t.name).reduce((s,e)=>s+Number(e.betrag),0)
+                   +state.kassenbuch.filter(e=>!e.geloescht&&e.bezahlt_von===t.name&&e.typ==='Ausgabe').reduce((s,e)=>s+Number(e.betrag),0);
+    const soll=(tage*kpt)+fzEinzeln+fzAnteil+(tage*spKptag)+(tage*campingKptag)+(tage*stromKptag)+(tage*dkKptag)-gutschrift;
+    const saldo=eingezahlt-soll;
+    return{name:t.name,tage,eingezahlt,soll,saldo,gutschrift};
+  });
+
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+    <title>Camping Kassenbuch ${activeYear} – Abrechnung</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:20px;color:#111}
+      h1{font-size:20px;margin-bottom:4px}
+      h2{font-size:15px;margin:16px 0 8px;border-bottom:2px solid #2d6a2d;padding-bottom:4px;color:#1a3a1a}
+      table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+      th{background:#e8f5e9;padding:6px 8px;text-align:left;border:1px solid #c8dfc8;font-size:11px}
+      td{padding:5px 8px;border:1px solid #e0e0e0}
+      .pos{color:#155724;font-weight:700} .neg{color:#721c24;font-weight:700}
+      .meta{font-size:11px;color:#666;margin-bottom:16px}
+      @media print{@page{size:A4;margin:10mm}}
+    </style></head><body>
+    <h1>🏕️ Camping Kassenbuch ${activeYear}</h1>
+    <div class="meta">Gedruckt: ${new Date().toLocaleString('de')} | Benutzer: ${currentUser.vorname||currentUser.username}</div>
+    <h2>Zusammenfassung</h2>
+    <table><tr><th>Gesamtausgaben</th><th>Davon Standplatz</th><th>Davon Strom</th><th>Davon Duschkarten</th><th>Personentage</th></tr>
+    <tr><td>${fmt(totalAus)}</td><td>${fmt(spGesamt)}</td><td>${fmt(totalStrom)}</td><td>${fmt(dkVerbrauch)}</td><td>${ptage}</td></tr></table>
+    <h2>Individuelle Abrechnung</h2>
+    <table><tr><th>Name</th><th>Tage</th><th>Gesamtsoll</th><th>Eingezahlt</th><th>Gutschrift</th><th>Saldo</th></tr>
+    ${abr.map(a=>`<tr><td><strong>${a.name}</strong></td><td>${a.tage}</td><td>${fmt(a.soll)}</td><td>${fmt(a.eingezahlt)}</td><td>${a.gutschrift>0?fmt(a.gutschrift):'–'}</td>
+    <td class="${a.saldo>=0?'pos':'neg'}">${(a.saldo>=0?'+':'')+fmt(a.saldo)}</td></tr>`).join('')}
+    </table>
+    <h2>Zahlungsausgleich</h2>
+    ${abr.filter(a=>a.saldo<-0.01).map(a=>`<p>➡️ <strong>${a.name}</strong> muss noch <strong>${fmt(Math.abs(a.saldo))}</strong> zahlen</p>`).join('')}
+    ${abr.filter(a=>a.saldo>0.01).map(a=>`<p>✅ <strong>${a.name}</strong> bekommt zurück: <strong>${fmt(a.saldo)}</strong></p>`).join('')}
+    ${abr.every(a=>Math.abs(a.saldo)<0.01)?'<p>✅ Alle Konten sind ausgeglichen!</p>':''}
+    <h2>Duschkarten-Abrechnung</h2>
+    <table><tr><th>Teilnehmer</th><th>Kartenwert</th><th>Restwert</th><th>Verbrauch</th><th>Checkout</th></tr>
+    ${state.duschkarten.filter(d=>d.abgerechnet).map(d=>`<tr><td>${d.teilnehmer}</td><td>${fmt(d.kartenwert||10)}</td><td>${fmt(d.restwert)}</td>
+    <td class="neg">${fmt((d.kartenwert||10)-(d.restwert||0))}</td><td>${fmtDT(d.checkout_am)}</td></tr>`).join('')||'<tr><td colspan="5">Keine abgerechneten Karten</td></tr>'}
+    </table>
+    <script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
 }
 
-if (loadConfig()) {
+// ══════════════════════════════════════════════════════════
+// APP START
+// ══════════════════════════════════════════════════════════
+if(loadConfig()){
   document.getElementById('setup-screen').classList.remove('show');
-  initApp();
+  // Session prüfen
+  try{
+    const sess=JSON.parse(localStorage.getItem('camping_session')||'null');
+    if(sess){
+      currentUser=sess;
+      startApp();
+    }else{
+      document.getElementById('login-screen').classList.add('show');
+    }
+  }catch(e){document.getElementById('login-screen').classList.add('show')}
 }
 </script>
 </body>
