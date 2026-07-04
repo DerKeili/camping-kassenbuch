@@ -682,6 +682,34 @@ function modalTeilnehmer(id){
       <div class="form-group"><label>Kennzeichen</label><input id="f-kz" value="${isEdit?(t.kennzeichen||''):''}"></div>
     </div>
     <div class="form-group"><label>Kontakt</label><input id="f-ko" value="${isEdit?(t.kontakt||''):''}"></div>
+    <div class="form-group" style="background:var(--gp);border-radius:8px;padding:10px 12px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:14px;font-weight:500">
+        <input type="checkbox" id="f-kostenfrei" ${isEdit&&t.kostenfrei?'checked':''} style="width:18px!important;height:18px;flex-shrink:0;margin:0;accent-color:var(--gm)">
+        <span>🆓 Anwesenheitstage sind kostenfrei (aber an allen Kosten beteiligt)</span>
+      </label>
+      <div style="font-size:11px;color:var(--mu);margin-top:4px;margin-left:28px">z.B. Gastteilnehmer ohne Standplatz-Kosten, aber beteiligt sich an Lebensmitteln</div>
+    </div>
+    ${!isEdit?`<div class="form-group" style="background:#e3f2fd;border-radius:8px;padding:10px 12px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:14px;font-weight:500">
+        <input type="checkbox" id="f-fz-anlegen" style="width:18px!important;height:18px;flex-shrink:0;margin:0;accent-color:var(--bl)">
+        <span>🚗 Fahrzeug gleich mit anlegen</span>
+      </label>
+      <div id="f-fz-felder" style="display:none;margin-top:10px">
+        <div class="form-row">
+          <div class="form-group"><label>Fahrzeugtyp</label><input id="f-fz-typ" placeholder="PKW, Wohnmobil..."></div>
+          <div class="form-group"><label>Kosten/Tag (€) aus Einstellungen</label>
+            <input id="f-fz-kosten" type="number" step="0.01" value="${Number(state.einstellungen.fahrzeugKostenProTag)||0}" readonly style="background:#f0f0f0">
+          </div>
+        </div>
+        <div class="form-group"><label>Kostenabrechnung</label>
+          <select id="f-fz-art">
+            <option value="aufteilen">👥 Auf alle aufteilen</option>
+            <option value="einzeln">👤 Einzeln abrechnen</option>
+            <option value="standplatz">🅿️ Kostenloses Standplatz-Fahrzeug</option>
+          </select>
+        </div>
+      </div>
+    </div>`:''}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveTeilnehmer(${isEdit?id:'undefined'})">Speichern</button>
@@ -692,19 +720,49 @@ function modalTeilnehmer(id){
   }
   document.getElementById('f-an').addEventListener('change',autoTage);
   document.getElementById('f-ab').addEventListener('change',autoTage);
+  const fzCb=document.getElementById('f-fz-anlegen');
+  if(fzCb)fzCb.addEventListener('change',function(){
+    document.getElementById('f-fz-felder').style.display=this.checked?'block':'none';
+    if(this.checked){
+      // Kosten berechnen: fahrzeugKostenProTag * Tage
+      const tage=Number(document.getElementById('f-tage').value)||0;
+      const kpt=Number(state.einstellungen.fahrzeugKostenProTag)||0;
+      document.getElementById('f-fz-kosten').value=(kpt*tage).toFixed(2);
+    }
+  });
+  document.getElementById('f-tage').addEventListener('change',function(){
+    if(document.getElementById('f-fz-anlegen')?.checked){
+      const kpt=Number(state.einstellungen.fahrzeugKostenProTag)||0;
+      document.getElementById('f-fz-kosten').value=(kpt*Number(this.value)).toFixed(2);
+    }
+  });
 }
 
 async function saveTeilnehmer(id){
   const name=document.getElementById('f-name').value.trim();
   if(!name){alert('Name eingeben');return}
   setSyncStatus('syncing','Speichere...');
+  const kostenfreiCb=document.getElementById('f-kostenfrei');
   const data={name,anreise:document.getElementById('f-an').value,abreise:document.getElementById('f-ab').value,
     tage:Number(document.getElementById('f-tage').value)||0,fahrzeughalter:document.getElementById('f-fzh').value,
     kennzeichen:document.getElementById('f-kz').value,kontakt:document.getElementById('f-ko').value,
+    kostenfrei:kostenfreiCb?kostenfreiCb.checked:false,
     jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()};
   try{
+    let tnId=id;
     if(id!==undefined){await sbUpdate('teilnehmer',id,data);await logActivity('geaendert',name,'teilnehmer',id)}
-    else{const r=await sbInsert('teilnehmer',{...data});await logActivity('erstellt',name,'teilnehmer',r[0]?.id)}
+    else{const r=await sbInsert('teilnehmer',{...data});tnId=r[0]?.id;await logActivity('erstellt',name,'teilnehmer',tnId)}
+    // Fahrzeug gleich anlegen wenn gewünscht
+    const fzAnlegen=document.getElementById('f-fz-anlegen');
+    if(fzAnlegen?.checked&&id===undefined){
+      const fzData={halter:name,typ:document.getElementById('f-fz-typ').value,
+        kosten:Number(document.getElementById('f-fz-kosten').value)||0,
+        kostenart:document.getElementById('f-fz-art').value,
+        standplatz_fahrzeug:document.getElementById('f-fz-art').value==='standplatz',
+        jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()};
+      const fr=await sbInsert('fahrzeuge',fzData);
+      await logActivity('erstellt','Fahrzeug für '+name,'fahrzeuge',fr[0]?.id);
+    }
     closeModal();await loadAll();
   }catch(e){setSyncStatus('error',e.message)}
 }
@@ -781,7 +839,10 @@ function renderFahrzeuge(){
 function modalFahrzeug(id){
   const isEdit=id!==undefined;
   const f=isEdit?state.fahrzeuge.find(x=>x.id===id):null;
-  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option${isEdit&&f.halter===t.name?' selected':''}>${t.name}</option>`).join('');
+  // Teilnehmer die bereits ein Fahrzeug haben ausblenden (außer beim Bearbeiten)
+  const hatFahrzeug=new Set(state.fahrzeuge.filter(f2=>!f2.geloescht&&(!isEdit||f2.id!==id)).map(f2=>f2.halter));
+  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht&&(!hatFahrzeug.has(t.name)||isEdit))
+    .map(t=>`<option${isEdit&&f&&f.halter===t.name?' selected':''}>${t.name}${hatFahrzeug.has(t.name)&&isEdit?' (hat bereits Fahrzeug)':''}</option>`).join('');
   openModal(isEdit?'Fahrzeug bearbeiten':'Neues Fahrzeug',`
     <div class="form-group"><label>Fahrzeughalter *</label>
       <select id="fv-h"><option value="">– auswählen –</option>${tnOpts}</select>
@@ -792,15 +853,10 @@ function modalFahrzeug(id){
     </div>
     <div class="form-group"><label>Kostenabrechnung</label>
       <select id="fv-art">
-        <option value="aufteilen"${isEdit&&f.kostenart!=='einzeln'?' selected':''}>👥 Auf alle aufteilen</option>
+        <option value="aufteilen"${isEdit&&f.kostenart!=='einzeln'&&f.kostenart!=='standplatz'?' selected':''}>👥 Auf alle aufteilen</option>
         <option value="einzeln"${isEdit&&f.kostenart==='einzeln'?' selected':''}>👤 Einzeln abrechnen (nur Halter)</option>
+        <option value="standplatz"${isEdit&&(f.kostenart==='standplatz'||f.standplatz_fahrzeug===true)?' selected':''}>🅿️ Kostenloses Standplatz-Fahrzeug (wird nicht berechnet)</option>
       </select>
-    </div>
-    <div class="form-group">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:14px">
-        <input type="checkbox" id="fv-sp" ${isEdit&&f.standplatz_fahrzeug?'checked':''} style="width:18px!important;height:18px;flex-shrink:0;margin:0;cursor:pointer;accent-color:var(--gm)">
-        🅿️ Dieses Fahrzeug ist das kostenfreie Standplatz-Fahrzeug
-      </label>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
@@ -1154,8 +1210,10 @@ function berechneSaldo(teilnehmerName){
   const campingKptag=Number(es.campingKostenProPersonTag)||0;
   const totalStrom=(Number(es.stromPreisKwh)||0)*(Number(es.stromVerbrauchKwh)||0);
   const stromKptag=ptage>0?totalStrom/ptage:0;
-  const dkVerbrauch=state.duschkarten.filter(d=>d.abgerechnet).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
-  const dkKptag=ptage>0?dkVerbrauch/ptage:0;
+  const dkVerbrauchAlle=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart!=='einzeln').reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
+  const dkKptag=ptage>0?dkVerbrauchAlle/ptage:0;
+  // Einzeln abgerechnete DK direkt dem Teilnehmer belasten
+  const dkEinzeln=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart==='einzeln'&&d.teilnehmer===teilnehmerName).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
 
   // Kassenausgaben
   const totalKb=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
@@ -1171,7 +1229,17 @@ function berechneSaldo(teilnehmerName){
   const fzAnteil=ptage>0?(fzAufteilen/ptage)*tage:0;
   const gutschrift=state.einkaufe.filter(e=>!e.geloescht&&e.bezahlt_von===teilnehmerName).reduce((s,e)=>s+Number(e.betrag),0)
                  +state.kassenbuch.filter(e=>!e.geloescht&&e.bezahlt_von===teilnehmerName&&e.typ==='Ausgabe').reduce((s,e)=>s+Number(e.betrag),0);
-  const soll=(tage*kpt)+fzEinzeln+fzAnteil+(tage*spKptag)+(tage*campingKptag)+(tage*stromKptag)+(tage*dkKptag)-gutschrift;
+
+  // Bezahlte Offene Posten: der Betrag steckt bereits im Einkauf (totalEk),
+  // wird also im Soll schon verteilt. Wenn Teilnehmer den OP selbst bezahlt,
+  // muss sein persönlicher OP-Anteil aus dem Soll herausgerechnet werden.
+  const opBezahlt=state.offenePosten.filter(o=>o.bezahlt&&o.teilnehmer===teilnehmerName).reduce((s,o)=>s+Number(o.betrag),0);
+
+  const kostenfrei=t.kostenfrei===true;
+  // Kostenfrei = keine Standplatz/Camping-Kosten, aber Gemeinschaftskosten (Lebensmittel etc.)
+  const sollOhneKostenfrei=(tage*kpt)+fzEinzeln+fzAnteil+(tage*stromKptag)+(tage*dkKptag)+dkEinzeln-gutschrift-opBezahlt;
+  const sollMitKostenfrei=sollOhneKostenfrei+(kostenfrei?0:(tage*spKptag)+(tage*campingKptag));
+  const soll=sollMitKostenfrei;
 
   // Eingezahlt (Einzahlungen minus Auszahlungen)
   const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===teilnehmerName&&e.typ!=='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0)
@@ -1282,10 +1350,27 @@ function renderDuschkarten(){
 
 function modalNewDuschkarte(){
   const dkWert=Number(state.einstellungen.duschkartenWert)||10;
-  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option>${t.name}</option>`).join('');
+  // Nur Teilnehmer ohne aktive Duschkarte anzeigen
+  const hatKarte=new Set(state.duschkarten.filter(d=>!d.abgerechnet).map(d=>d.teilnehmer));
+  const tnOpts=state.teilnehmer.filter(t=>!t.geloescht&&!hatKarte.has(t.name))
+    .map(t=>`<option>${t.name}</option>`).join('');
+  if(!tnOpts){
+    openModal('Duschkarte ausgeben','<p style="font-size:14px;color:var(--mu);padding:10px 0">Alle Teilnehmer haben bereits eine aktive Duschkarte.</p><div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Schließen</button></div>');
+    return;
+  }
   openModal('Duschkarte ausgeben',`
-    <div class="form-group"><label>Teilnehmer *</label><select id="dk-tn"><option value="">– auswählen –</option>${tnOpts}</select></div>
-    <div class="form-group"><label>Kartenwert (€)</label><input id="dk-wert" type="number" step="0.01" value="${dkWert}"></div>
+    <div class="form-group"><label>Teilnehmer * (nur ohne aktive Karte)</label>
+      <select id="dk-tn"><option value="">– auswählen –</option>${tnOpts}</select>
+    </div>
+    <div class="form-group"><label>Kartenwert (€)</label>
+      <input id="dk-wert" type="number" step="0.01" value="${dkWert}">
+    </div>
+    <div class="form-group"><label>Abrechnung</label>
+      <select id="dk-art">
+        <option value="aufteilen">👥 Auf alle aufteilen (anteilig nach Tagen)</option>
+        <option value="einzeln">👤 Einzeln – nur dieser Teilnehmer zahlt</option>
+      </select>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveDuschkarte()">Ausgeben</button>
@@ -1303,7 +1388,8 @@ async function saveDuschkarte(){
   if(btn){btn.disabled=true;btn.textContent='Speichere...';}
   setSyncStatus('syncing','Speichere...');
   try{
-    await sbInsert('duschkarten',{teilnehmer:tn,kartenwert:Number(wert),jahr:activeYear,ausgegeben_am:new Date().toISOString()});
+    const dkArt=document.getElementById('dk-art')?.value||'aufteilen';
+    await sbInsert('duschkarten',{teilnehmer:tn,kartenwert:Number(wert),kostenart:dkArt,jahr:activeYear,ausgegeben_am:new Date().toISOString()});
     await logActivity('erstellt','Duschkarte: '+tn,'duschkarten',null);
     closeModal();await loadAll();
   }catch(e){setSyncStatus('error',e.message)}
@@ -1340,6 +1426,16 @@ async function saveCheckout(id,kartenwert){
   }catch(e){setSyncStatus('error',e.message)}
 }
 
+async function undoCheckout(id){
+  if(!confirm('Checkout rückgängig machen? Die Karte wird wieder als aktiv markiert.'))return;
+  setSyncStatus('syncing','Setze zurück...');
+  try{
+    await sbUpdate('duschkarten',id,{restwert:null,checkout_am:null,abgerechnet:false});
+    await logActivity('geaendert','Duschkarte Checkout rückgängig','duschkarten',id);
+    await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
 // ══════════════════════════════════════════════════════════
 // ABRECHNUNG
 // ══════════════════════════════════════════════════════════
@@ -1371,8 +1467,10 @@ function renderAbrechnung(){
   const stromKptag=ptage>0?totalStrom/ptage:0;
 
   // Duschkarten-Gesamtverbrauch (abgerechnete Karten)
-  const dkVerbrauch=state.duschkarten.filter(d=>d.abgerechnet).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
-  const dkKptag=ptage>0?dkVerbrauch/ptage:0;
+  const dkVerbrauchAlle=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart!=='einzeln').reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
+  const dkKptag=ptage>0?dkVerbrauchAlle/ptage:0;
+  // Einzeln abgerechnete DK direkt dem Teilnehmer belasten
+  const dkEinzeln=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart==='einzeln'&&d.teilnehmer===teilnehmerName).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
 
   const totalKb=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
   const totalEk=state.einkaufe.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
@@ -1403,17 +1501,18 @@ function renderAbrechnung(){
     const gutschrift=state.einkaufe.filter(e=>!e.geloescht&&e.bezahlt_von===t.name).reduce((s,e)=>s+Number(e.betrag),0)
                    +state.kassenbuch.filter(e=>!e.geloescht&&e.bezahlt_von===t.name&&e.typ==='Ausgabe').reduce((s,e)=>s+Number(e.betrag),0);
     // Bezahlte offene Posten durch Saldo
-    const opBezahlt=state.offenePosten.filter(o=>o.bezahlt&&o.teilnehmer===t.name).reduce((s,o)=>s+Number(o.betrag),0);
+    const opBezahltTN=state.offenePosten.filter(o=>o.bezahlt&&o.teilnehmer===t.name).reduce((s,o)=>s+Number(o.betrag),0);
     const gk=tage*kpt;
     const standK=tage*spKptag;
     const campK=tage*campingKptag;
     const stromK=tage*stromKptag;
     const dkK=tage*dkKptag;
-    const soll=gk+fzEinzeln+fzAnteil+standK+campK+stromK+dkK-gutschrift;
+    const kostenfrei=t.kostenfrei===true;
+    const soll=gk+fzEinzeln+fzAnteil+(kostenfrei?0:standK+campK)+stromK+dkK+dkKEinzeln-gutschrift-(opBezahltTN||0);
     const saldo=eingezahlt-soll;
     // Offene Posten für diesen Teilnehmer (unbezahlt)
     const opOffen=state.offenePosten.filter(o=>!o.bezahlt&&o.teilnehmer===t.name);
-    return{name:t.name,tage,gk,fzEinzeln,fzAnteil,standK,campK,stromK,dkK,gutschrift,opBezahlt,soll,eingezahlt,saldo,opOffen};
+    return{name:t.name,tage,gk,fzEinzeln,fzAnteil,standK,campK,stromK,dkK,gutschrift,opBezahltTN,soll,eingezahlt,saldo,opOffen};
   });
 
   const tableRows=abr.map(a=>`
@@ -1595,6 +1694,14 @@ function renderEinstellungen(){
     <div class="card">
       <h3>🚿 Duschkarten-Einstellungen</h3>
       <div class="form-group"><label>Standard-Kartenwert (€)</label><input type="number" step="0.01" value="${dkWert}" onchange="saveEinstellung('duschkartenWert',this.value)"></div>
+    </div>
+
+    <div class="card">
+      <h3>🚗 Fahrzeugkosten-Einstellungen</h3>
+      <p style="font-size:13px;color:var(--mu);margin-bottom:12px">Standardkosten pro Fahrzeug und Tag. Wird bei der Teilnehmer-Erstellung automatisch vorgeschlagen.</p>
+      <div class="form-group"><label>Kosten pro Fahrzeug/Tag (€)</label>
+        <input type="number" step="0.01" placeholder="z.B. 5.00" value="${Number(es.fahrzeugKostenProTag)||''}" onchange="saveEinstellung('fahrzeugKostenProTag',this.value)">
+      </div>
     </div>
 
     <div class="card">
@@ -1804,8 +1911,10 @@ function printAbrechnung(){
   const campingKptag=Number(es.campingKostenProPersonTag)||0;
   const totalStrom=(Number(es.stromPreisKwh)||0)*(Number(es.stromVerbrauchKwh)||0);
   const stromKptag=ptage>0?totalStrom/ptage:0;
-  const dkVerbrauch=state.duschkarten.filter(d=>d.abgerechnet).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
-  const dkKptag=ptage>0?dkVerbrauch/ptage:0;
+  const dkVerbrauchAlle=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart!=='einzeln').reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
+  const dkKptag=ptage>0?dkVerbrauchAlle/ptage:0;
+  // Einzeln abgerechnete DK direkt dem Teilnehmer belasten
+  const dkEinzeln=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart==='einzeln'&&d.teilnehmer===teilnehmerName).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
   const totalKb=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
   const totalEk=state.einkaufe.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
   const totalAus=totalKb+totalEk;
