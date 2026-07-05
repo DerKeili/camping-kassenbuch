@@ -954,7 +954,11 @@ function renderEinzahlungen(){
       </div>
     </div>
     <div class="search-bar">
-      <input type="text" placeholder="🔍 Suchen (Name, Datum, Verwendungszweck...)" value="${tableSearch['einzahlungen']||''}" oninput="filterTable('einzahlungen',this.value)">
+      <input type="text" id="search-einzahlungen" placeholder="Name, Datum, Verwendungszweck..." value="${tableSearch['einzahlungen']||''}"
+        onkeydown="if(event.key==='Enter')doSearch('einzahlungen')"
+        style="flex:1;min-width:180px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--bd);background:var(--gf);font-size:13px">
+      <button onclick="doSearch('einzahlungen')" class="btn btn-primary btn-sm">🔍 Suchen</button>
+      ${tableSearch['einzahlungen']?`<button onclick="clearSearch('einzahlungen')" class="btn btn-ghost btn-sm">✕ Löschen</button>`:''}
     </div>
     ${data.length===0?`<div class="card empty"><div class="emoji">💰</div><p>Noch keine Einzahlungen</p></div>`:`
     <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
@@ -968,7 +972,16 @@ function modalEin(id){
   const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option${isEdit&&e.teilnehmer===t.name?' selected':''}>${t.name}</option>`).join('');
   const isAusz = isEdit && e.typ==='Auszahlung';
   openModal(isEdit?(isAusz?'Auszahlung bearbeiten':'Einzahlung bearbeiten'):'Einzahlung eintragen',`
-    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option><option value="__ALLE__">👥 Alle Teilnehmer (anteilig)</option>${tnOpts}</select></div>
+    <div class="form-group"><label>Teilnehmer / Buchungsart *</label>
+      <select id="ei-t" onchange="document.getElementById('ei-kasseneintrag-hint').style.display=this.value==='__KASSENEINTRAG__'?'block':'none'">
+        <option value="">– auswählen –</option>
+        <option value="__KASSENEINTRAG__">🏧 Kasseneintrag (Einnahme ins Kassenbuch)</option>
+        ${tnOpts}
+      </select>
+    </div>
+    <div id="ei-kasseneintrag-hint" style="display:none;background:#e3f2fd;border-radius:8px;padding:10px 12px;font-size:12px;color:#004085;margin-bottom:10px">
+      ℹ️ <strong>Kasseneintrag:</strong> Wird direkt als Einnahme im Kassenbuch gebucht. Kein Teilnehmer wird zugeordnet. Der Betrag erhöht den Kassenbestand.
+    </div>
     ${isEdit?`<div class="form-group"><label>Typ</label>
       <select id="ei-typ">
         <option value="Einzahlung"${!isAusz?' selected':''}>💚 Einzahlung</option>
@@ -991,14 +1004,25 @@ function modalEin(id){
 async function saveEin(id,typ){
   const t=document.getElementById('ei-t').value,b=document.getElementById('ei-b').value;
   if(!t||!b){alert('Pflichtfelder ausfüllen');return}
-  // Alle Teilnehmer
-  if(t==='__ALLE__'){
-    await saveEinAlleAufteilen(
-      document.getElementById('ei-d').value,
-      Number(b),
-      document.getElementById('ei-art').value,
-      document.getElementById('ei-zweck').value
-    );
+  // Kasseneintrag – nur als Einnahme, kein Teilnehmer
+  if(t==='__KASSENEINTRAG__'){
+    setSyncStatus('syncing','Speichere...');
+    try{
+      await sbInsert('kassenbuch',{
+        datum:document.getElementById('ei-d').value,
+        typ:'Einnahme',
+        kategorie:'Diverses',
+        beschreibung:document.getElementById('ei-zweck').value||'Kasseneintrag',
+        betrag:Number(b),
+        bezahlt_von:null,
+        zahlungsart:document.getElementById('ei-art').value,
+        jahr:activeYear,
+        geaendert_von:currentUser.username,
+        geaendert_am:new Date().toISOString()
+      });
+      await logActivity('erstellt','Kasseneintrag '+fmt(Number(b)),'kassenbuch',null);
+      closeModal();await loadAll();
+    }catch(e){setSyncStatus('error',e.message);}
     return;
   }
   setSyncStatus('syncing','Speichere...');
@@ -1020,7 +1044,16 @@ function modalAuszahlung(){
     <div style="background:#fce4ec;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;color:#721c24">
       💸 Auszahlungen werden vom Guthaben des Teilnehmers abgezogen. Nur nach Abrechnung verwenden!
     </div>
-    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option><option value="__ALLE__">👥 Alle Teilnehmer (anteilig)</option>${tnOpts}</select></div>
+    <div class="form-group"><label>Teilnehmer / Buchungsart *</label>
+      <select id="ei-t" onchange="document.getElementById('ei-kasseneintrag-hint').style.display=this.value==='__KASSENEINTRAG__'?'block':'none'">
+        <option value="">– auswählen –</option>
+        <option value="__KASSENEINTRAG__">🏧 Kasseneintrag (Einnahme ins Kassenbuch)</option>
+        ${tnOpts}
+      </select>
+    </div>
+    <div id="ei-kasseneintrag-hint" style="display:none;background:#e3f2fd;border-radius:8px;padding:10px 12px;font-size:12px;color:#004085;margin-bottom:10px">
+      ℹ️ <strong>Kasseneintrag:</strong> Wird direkt als Einnahme im Kassenbuch gebucht. Kein Teilnehmer wird zugeordnet. Der Betrag erhöht den Kassenbestand.
+    </div>
     <div class="form-row">
       <div class="form-group"><label>Datum</label><input id="ei-d" type="date" value="${today()}"></div>
       <div class="form-group"><label>Betrag (€) *</label><input id="ei-b" type="number" step="0.01"></div>
@@ -1074,7 +1107,11 @@ function renderKassenbuch(){
       </div>
     </div>
     <div class="search-bar">
-      <input type="text" placeholder="🔍 Suchen (Beschreibung, Kategorie, Bezahlt von...)" value="${tableSearch['kassenbuch']||''}" oninput="filterTable('kassenbuch',this.value)">
+      <input type="text" id="search-kassenbuch" placeholder="Beschreibung, Kategorie, Bezahlt von..." value="${tableSearch['kassenbuch']||''}"
+        onkeydown="if(event.key==='Enter')doSearch('kassenbuch')"
+        style="flex:1;min-width:180px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--bd);background:var(--gf);font-size:13px">
+      <button onclick="doSearch('kassenbuch')" class="btn btn-primary btn-sm">🔍 Suchen</button>
+      ${tableSearch['kassenbuch']?`<button onclick="clearSearch('kassenbuch')" class="btn btn-ghost btn-sm">✕ Löschen</button>`:''}
     </div>
     ${aktiv.length===0?`<div class="card empty"><div class="emoji">📒</div><p>Kein Eintrag</p></div>`:`
     <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
@@ -1162,7 +1199,11 @@ function renderEinkaufe(){
       </div>
     </div>
     <div class="search-bar">
-      <input type="text" placeholder="🔍 Suchen (Markt, Produkt, Kategorie, Bezahlt von...)" value="${tableSearch['einkaufe']||''}" oninput="filterTable('einkaufe',this.value)">
+      <input type="text" id="search-einkaufe" placeholder="Markt, Produkt, Kategorie, Bezahlt von..." value="${tableSearch['einkaufe']||''}"
+        onkeydown="if(event.key==='Enter')doSearch('einkaufe')"
+        style="flex:1;min-width:180px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--bd);background:var(--gf);font-size:13px">
+      <button onclick="doSearch('einkaufe')" class="btn btn-primary btn-sm">🔍 Suchen</button>
+      ${tableSearch['einkaufe']?`<button onclick="clearSearch('einkaufe')" class="btn btn-ghost btn-sm">✕ Löschen</button>`:''}
     </div>
     ${aktiv.length===0?`<div class="card empty"><div class="emoji">🛒</div><p>Noch keine Einkäufe</p></div>`:`
     <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
@@ -2328,7 +2369,25 @@ function sortTable(tbl, col){
 }
 
 function filterTable(tbl, val){
-  tableSearch[tbl]=val.toLowerCase();
+  tableSearch[tbl]=(val||'').toLowerCase().trim();
+}
+
+function doSearch(tbl){
+  // Wert aus Suchfeld holen und dann rendern
+  const el=document.getElementById('search-'+tbl);
+  if(el) tableSearch[tbl]=(el.value||'').toLowerCase().trim();
+  renderMain();
+  // Fokus wiederherstellen nach renderMain
+  requestAnimationFrame(()=>{
+    const el2=document.getElementById('search-'+tbl);
+    if(el2){el2.focus();el2.setSelectionRange(el2.value.length,el2.value.length);}
+  });
+}
+
+function clearSearch(tbl){
+  tableSearch[tbl]='';
+  const el=document.getElementById('search-'+tbl);
+  if(el) el.value='';
   renderMain();
 }
 
