@@ -223,12 +223,18 @@ textarea{resize:vertical;min-height:60px}
 // ══════════════════════════════════════════════════════════
 // SUPABASE
 // ══════════════════════════════════════════════════════════
-let SUPA_URL='', SUPA_KEY='';
-function loadConfig(){SUPA_URL=localStorage.getItem('supa_url')||'';SUPA_KEY=localStorage.getItem('supa_key')||'';return SUPA_URL&&SUPA_KEY}
+let SUPA_URL='https://qvyzrfqmrghqfgscvlfg.supabase.co', SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2eXpyZnFtcmdocWZnc2N2bGZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NTU3ODEsImV4cCI6MjA5ODIzMTc4MX0.2CzmTCA5MVFLLVJqx75Rjj_QCO_iDoQOQWfRDa1jUrY';
+function loadConfig(){
+  // Supabase ist direkt integriert - localStorage als Override möglich
+  const savedUrl=localStorage.getItem('supa_url');
+  const savedKey=localStorage.getItem('supa_key');
+  if(savedUrl)SUPA_URL=savedUrl;
+  if(savedKey)SUPA_KEY=savedKey;
+  return true; // immer verbunden
+}
 function saveConfig(){
-  const url=document.getElementById('setup-url').value.trim().replace(/\/$/,'');
-  const key=document.getElementById('setup-key').value.trim();
-  if(!url||!key){showSetupErr('Beide Felder ausfüllen');return}
+  const url=(document.getElementById('setup-url')?.value||'').trim().replace(/\/$/,'')||SUPA_URL;
+  const key=(document.getElementById('setup-key')?.value||'').trim()||SUPA_KEY;
   localStorage.setItem('supa_url',url);localStorage.setItem('supa_key',key);
   SUPA_URL=url;SUPA_KEY=key;
   document.getElementById('setup-screen').classList.remove('show');
@@ -1897,61 +1903,133 @@ async function addJahr(){
     const r=await sbInsert('jahre',{jahr:Number(j),bezeichnung:b,aktiv:false});
     await logActivity('erstellt','Jahr '+j,'jahre',null);
     await loadAll();
-    // Anbieten Teilnehmer zu übernehmen
-    if(state.teilnehmer.length>0){
-      const prev=state.teilnehmer.filter(t=>!t.geloescht);
-      if(prev.length>0){
-        openModal('Teilnehmer übernehmen?',
-          '<p style="font-size:13px;margin-bottom:14px">Sollen Teilnehmer aus dem aktuellen Jahr in das neue Jahr '+j+' übernommen werden?</p>'
-          +'<p style="font-size:12px;color:var(--mu);margin-bottom:14px">Nur Name, Vorname und Geburtsdatum werden übernommen. Anreise/Abreise/Fahrzeug müssen neu eingetragen werden.</p>'
-          +'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Nein</button><button class="btn btn-primary" onclick="uebernehmeTeílnehmer('+j+')">Ja, übernehmen</button></div>'
-        );
+    // Anbieten Teilnehmer zu übernehmen – selektiv mit Fahrzeugdaten
+    const prevTN=state.teilnehmer.filter(t=>!t.geloescht);
+    if(prevTN.length>0){
+      await zeigeUebernehmeAuswahl(Number(j), prevTN);
+    }
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+// Globaler Speicher für die Übernahme-Auswahl
+let _uebernahmeData = {neuesJahr:null, vorjahr:null, teilnehmer:[], fahrzeuge:{}};
+
+async function zeigeUebernehmeAuswahl(neuesJahr, prevTN){
+  const vorjahr=activeYear;
+  // Fahrzeugdaten des Vorjahres laden
+  let prevFz=[];
+  try{ prevFz=await sbGet('fahrzeuge','jahr=eq.'+vorjahr); }catch(e){}
+  const aktFz=prevFz.filter(f=>!f.geloescht);
+
+  // Fahrzeuge nach Halter gruppieren
+  const fzByHalter={};
+  aktFz.forEach(f=>{fzByHalter[f.halter]=f;});
+
+  _uebernahmeData={neuesJahr, vorjahr, teilnehmer:prevTN, fahrzeuge:fzByHalter};
+
+  // Selektions-Modal aufbauen
+  let html='<p style="font-size:13px;color:var(--mu);margin-bottom:14px">Wähle welche Teilnehmer in das Jahr '+neuesJahr+' übernommen werden sollen:</p>';
+  html+='<div style="max-height:60vh;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;padding:6px">';
+  
+  prevTN.forEach((t,i)=>{
+    const fz=fzByHalter[t.name];
+    const hasFz=!!fz;
+    html+=`<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:6px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;text-transform:none;font-size:14px">
+        <input type="checkbox" id="tn-check-${i}" checked style="width:18px!important;height:18px;flex-shrink:0;accent-color:var(--gm)">
+        <span>${t.name}${t.geburtsdatum?' <span style="font-size:11px;color:var(--mu)">(*'+t.geburtsdatum+')</span>':''}</span>
+      </label>`;
+    if(hasFz){
+      html+=`<div id="fz-check-wrap-${i}" style="margin-left:28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-size:13px;color:var(--bl);font-weight:500">
+          <input type="checkbox" id="fz-check-${i}" checked style="width:16px!important;height:16px;flex-shrink:0;accent-color:var(--bl)">
+          🚗 Fahrzeug übernehmen: ${fz.typ||'PKW'} (${t.fahrzeughalter||t.name}) – Kennzeichen: ${fz.kennzeichen||t.kennzeichen||'–'}
+        </label>
+      </div>`;
+    }
+    html+=`</div>`;
+  });
+
+  html+='</div>';
+  html+=`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+    <button onclick="alleAbwaehlen()" class="btn btn-ghost btn-sm">Alle abwählen</button>
+    <button onclick="alleAuswaehlen()" class="btn btn-ghost btn-sm">Alle auswählen</button>
+  </div>`;
+  html+=`<div class="modal-actions" style="margin-top:10px">
+    <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+    <button class="btn btn-primary" onclick="doUebernehme()">✅ Ausgewählte übernehmen</button>
+  </div>`;
+
+  openModal('Teilnehmer für '+neuesJahr+' übernehmen', html);
+}
+
+function alleAbwaehlen(){
+  _uebernahmeData.teilnehmer.forEach((_,i)=>{
+    const cb=document.getElementById('tn-check-'+i);
+    const fz=document.getElementById('fz-check-'+i);
+    if(cb)cb.checked=false;
+    if(fz)fz.checked=false;
+  });
+}
+
+function alleAuswaehlen(){
+  _uebernahmeData.teilnehmer.forEach((_,i)=>{
+    const cb=document.getElementById('tn-check-'+i);
+    const fz=document.getElementById('fz-check-'+i);
+    if(cb)cb.checked=true;
+    if(fz)fz.checked=true;
+  });
+}
+
+async function doUebernehme(){
+  const {neuesJahr, vorjahr, teilnehmer, fahrzeuge}=_uebernahmeData;
+  closeModal();
+  setSyncStatus('syncing','Übernehme Teilnehmer...');
+  let count=0;
+  try{
+    for(let i=0;i<teilnehmer.length;i++){
+      const cb=document.getElementById('tn-check-'+i);
+      if(!cb||!cb.checked) continue;
+      const t=teilnehmer[i];
+      const fz=fahrzeuge[t.name];
+      // Teilnehmer übernehmen (Name, Geburtsdatum, Kontakt, Kennzeichen)
+      await sbInsert('teilnehmer',{
+        name:t.name,
+        geburtsdatum:t.geburtsdatum||null,
+        kontakt:t.kontakt||null,
+        fahrzeughalter:t.fahrzeughalter||null,
+        kennzeichen:t.kennzeichen||null,
+        jahr:neuesJahr,
+        geaendert_von:currentUser.username,
+        geaendert_am:new Date().toISOString()
+      });
+      count++;
+      // Fahrzeug übernehmen wenn ausgewählt
+      const fzCb=document.getElementById('fz-check-'+i);
+      if(fz&&fzCb&&fzCb.checked){
+        await sbInsert('fahrzeuge',{
+          halter:fz.halter,
+          typ:fz.typ,
+          kennzeichen:fz.kennzeichen||t.kennzeichen||null,
+          kosten:fz.kosten||0,
+          kostenart:fz.kostenart||'aufteilen',
+          standplatz_fahrzeug:fz.standplatz_fahrzeug||false,
+          jahr:neuesJahr,
+          geaendert_von:currentUser.username,
+          geaendert_am:new Date().toISOString()
+        });
       }
     }
-  }catch(e){setSyncStatus('error',e.message)}
+    await logActivity('erstellt',count+' Teilnehmer übernommen nach '+neuesJahr,'teilnehmer',null);
+    activeYear=neuesJahr;
+    await loadAll();
+    setSyncStatus('ok',count+' Teilnehmer erfolgreich in '+neuesJahr+' übernommen');
+  }catch(e){setSyncStatus('error','Fehler bei Übernahme: '+e.message)}
 }
 
-async function uebernehmeTeílnehmer(neuesJahr){
-  setSyncStatus('syncing','Übernehme...');
-  closeModal();
-  const vorjahr=activeYear;
-  try{
-    const prev=await sbGet('teilnehmer','jahr=eq.'+vorjahr);
-    for(const t of prev.filter(x=>!x.geloescht)){
-      await sbInsert('teilnehmer',{
-        name:t.name,geburtsdatum:t.geburtsdatum||null,
-        kontakt:t.kontakt||null,
-        jahr:neuesJahr,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()
-      });
-    }
-    // Frage nach Fahrzeugen
-    const prevFz=await sbGet('fahrzeuge','jahr=eq.'+vorjahr);
-    if(prevFz.filter(f=>!f.geloescht).length>0){
-      openModal('Fahrzeuge übernehmen?',
-        '<p style="font-size:13px;margin-bottom:14px">Sollen auch die Fahrzeuge übernommen werden?</p>'
-        +'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Nein</button><button class="btn btn-primary" onclick="uebernehmeFahrzeuge('+neuesJahr+','+vorjahr+')">Ja</button></div>'
-      );
-    }else{
-      activeYear=neuesJahr;await loadAll();
-    }
-    await logActivity('erstellt','Teilnehmer übernommen nach '+neuesJahr,'teilnehmer',null);
-  }catch(e){setSyncStatus('error',e.message)}
-}
-
-async function uebernehmeFahrzeuge(neuesJahr,vorjahr){
-  closeModal();setSyncStatus('syncing','Übernehme Fahrzeuge...');
-  try{
-    const prevFz=await sbGet('fahrzeuge','jahr=eq.'+vorjahr);
-    for(const f of prevFz.filter(x=>!x.geloescht)){
-      await sbInsert('fahrzeuge',{
-        halter:f.halter,typ:f.typ,kosten:f.kosten||0,
-        kostenart:f.kostenart||'aufteilen',standplatz_fahrzeug:f.standplatz_fahrzeug||false,
-        jahr:neuesJahr,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()
-      });
-    }
-    activeYear=neuesJahr;await loadAll();
-  }catch(e){setSyncStatus('error',e.message)}
-}
+// Legacy - wird nicht mehr direkt aufgerufen
+async function uebernehmeTeílnehmer(neuesJahr){ await zeigeUebernehmeAuswahl(neuesJahr, state.teilnehmer.filter(t=>!t.geloescht)); }
+async function uebernehmeFahrzeuge(neuesJahr,vorjahr){ /* wird durch doUebernehme ersetzt */ }
 
 async function setAktivesJahr(id,jahr){
   setSyncStatus('syncing','...');
@@ -2472,19 +2550,19 @@ async function saveEinAlleAufteilen(datum, betrag, zahlungsart, zweck){
 // ══════════════════════════════════════════════════════════
 // APP START
 // ══════════════════════════════════════════════════════════
-if(loadConfig()){
-  document.getElementById('setup-screen').classList.remove('show');
-  // Session prüfen
-  try{
-    const sess=JSON.parse(localStorage.getItem('camping_session')||'null');
-    if(sess){
-      currentUser=sess;
-      startApp();
-    }else{
-      document.getElementById('login-screen').classList.add('show');
-    }
-  }catch(e){document.getElementById('login-screen').classList.add('show')}
-}
+// Supabase direkt integriert – immer verbunden
+loadConfig();
+document.getElementById('setup-screen').classList.remove('show');
+// Session prüfen
+try{
+  const sess=JSON.parse(localStorage.getItem('camping_session')||'null');
+  if(sess&&sess.username){
+    currentUser=sess;
+    startApp();
+  }else{
+    document.getElementById('login-screen').classList.add('show');
+  }
+}catch(e){document.getElementById('login-screen').classList.add('show')}
 </script>
 </body>
 </html>
