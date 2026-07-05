@@ -129,6 +129,11 @@ textarea{resize:vertical;min-height:60px}
 .payment-row.owes{background:#fce4ec}
 .payment-row.gets{background:#e8f5e9}
   .hidden{display:none!important}
+  .search-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+  .search-bar input{flex:1;min-width:180px;padding:8px 12px;border-radius:8px;border:1.5px solid var(--bd);background:var(--gf);font-size:13px}
+  .search-bar select{padding:8px 10px;border-radius:8px;border:1.5px solid var(--bd);background:var(--gf);font-size:13px;width:auto}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{background:#e0eee0}
 .geloescht-banner{background:#f8d7da;border-radius:7px;padding:6px 10px;font-size:11px;color:#721c24;margin-top:4px;display:inline-block}
 .restore-btn{background:#2980b9;color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif}
 /* Vehicle cards */
@@ -641,6 +646,7 @@ function renderTeilnehmer(){
       +'<td>'+(t.anreise||'–')+'</td><td>'+(t.abreise||'–')+'</td>'
       +'<td>'+badge((t.tage||0)+' T','blue')+'</td>'
       +'<td>'+(t.fahrzeughalter||'–')+'</td><td>'+(t.kennzeichen||'–')+'</td><td>'+(t.kontakt||'–')+'</td>'
+      +'<td style="font-size:12px">'+(t.geburtsdatum||'–')+'</td>'
       +aenderungCell
       +'<td style="white-space:nowrap">'+actionBtns+'</td>'
       +'</tr>';
@@ -672,6 +678,7 @@ function modalTeilnehmer(id){
   const t=isEdit?state.teilnehmer.find(x=>x.id===id):null;
   openModal(isEdit?'Teilnehmer bearbeiten':'Neuer Teilnehmer',`
     <div class="form-group"><label>Name *</label><input id="f-name" value="${isEdit?t.name:''}" placeholder="Max Mustermann"></div>
+    <div class="form-group"><label>Geburtsdatum</label><input id="f-geb" type="date" value="${isEdit?(t.geburtsdatum||''):''}"></div>
     <div class="form-row">
       <div class="form-group"><label>Anreise</label><input id="f-an" type="date" value="${isEdit?(t.anreise||''):today()}"></div>
       <div class="form-group"><label>Abreise</label><input id="f-ab" type="date" value="${isEdit?(t.abreise||''):''}"></div>
@@ -743,7 +750,15 @@ async function saveTeilnehmer(id){
   if(!name){alert('Name eingeben');return}
   setSyncStatus('syncing','Speichere...');
   const kostenfreiCb=document.getElementById('f-kostenfrei');
-  const data={name,anreise:document.getElementById('f-an').value,abreise:document.getElementById('f-ab').value,
+  // Duplikat-Prüfung
+  if(id===undefined){
+    const geb=document.getElementById('f-geb').value;
+    const dup=state.teilnehmer.find(t=>!t.geloescht&&t.name.toLowerCase()===name.toLowerCase()&&(geb?t.geburtsdatum===geb:true));
+    if(dup){
+      if(!confirm('Ein Teilnehmer mit dem Namen "'+name+'"'+(geb?' und diesem Geburtsdatum':'')+' existiert bereits. Trotzdem anlegen?'))return;
+    }
+  }
+  const data={name,geburtsdatum:document.getElementById('f-geb').value,anreise:document.getElementById('f-an').value,abreise:document.getElementById('f-ab').value,
     tage:Number(document.getElementById('f-tage').value)||0,fahrzeughalter:document.getElementById('f-fzh').value,
     kennzeichen:document.getElementById('f-kz').value,kontakt:document.getElementById('f-ko').value,
     kostenfrei:kostenfreiCb?kostenfreiCb.checked:false,
@@ -892,7 +907,9 @@ function renderEinzahlungen(){
   const totalBar=einzData.filter(e=>e.zahlungsart!=='Konto').reduce((s,e)=>s+Number(e.betrag),0);
   const totalKonto=einzData.filter(e=>e.zahlungsart==='Konto').reduce((s,e)=>s+Number(e.betrag),0);
 
-  const rows=data.map(e=>`
+  let sortedEzData = applySearch(data, 'einzahlungen', ['teilnehmer','datum','verwendungszweck','zahlungsart']);
+  sortedEzData = applySort(sortedEzData, 'einzahlungen');
+  const rows=sortedEzData.map(e=>`
     <tr>
       <td><strong>${e.teilnehmer}</strong></td>
       <td>${e.datum}</td>
@@ -903,7 +920,7 @@ function renderEinzahlungen(){
       ${e.geaendert_von?`<td style="font-size:11px;color:var(--mu)">✏️ ${e.geaendert_von}</td>`:'<td>–</td>'}
       <td style="white-space:nowrap">
         ${canWrite()?`<button class="btn btn-ghost btn-sm" onclick="modalEin(${e.id})" style="margin-right:4px">✏️</button>
-        <button class="btn btn-danger" onclick="confirmDel('einzahlungen',${e.id},'${e.teilnehmer}')">✕</button>`:''}
+        <button class="btn btn-danger" onclick="confirmDelEin(${e.id},'${e.teilnehmer}')">✕</button>`:''}
       </td>
     </tr>`).join('');
 
@@ -915,9 +932,12 @@ function renderEinzahlungen(){
         ${canWrite()?`<button class="btn btn-primary btn-sm" onclick="modalEin()">+ Einzahlung</button><button class="btn btn-sm" style="background:#e67e22;color:#fff" onclick="modalAuszahlung()">− Auszahlung</button>`:''}
       </div>
     </div>
-    ${data.length===0?`<div class="card empty"><div class="emoji">💰</div><p>Noch keine Einzahlungen</p></div>`:
-    `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
-      <thead><tr><th>Teilnehmer</th><th>Datum</th><th>Typ</th><th>Zahlungsart</th><th>Verwendungszweck</th><th>Betrag</th><th>Geändert</th><th></th></tr></thead>
+    <div class="search-bar">
+      <input type="text" placeholder="🔍 Suchen (Name, Datum, Verwendungszweck...)" value="${tableSearch['einzahlungen']||''}" oninput="filterTable('einzahlungen',this.value)">
+    </div>
+    ${data.length===0?`<div class="card empty"><div class="emoji">💰</div><p>Noch keine Einzahlungen</p></div>`:`
+    <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+      <thead><tr><th class='sortable' onclick="sortTable('einzahlungen','teilnehmer')">Teilnehmer ${sortArrowTbl('einzahlungen','teilnehmer')}</th><th class='sortable' onclick="sortTable('einzahlungen','datum')">Datum ${sortArrowTbl('einzahlungen','datum')}</th><th>Typ</th><th>Zahlungsart</th><th class='sortable' onclick="sortTable('einzahlungen','verwendungszweck')">Verwendungszweck ${sortArrowTbl('einzahlungen','verwendungszweck')}</th><th class='sortable' onclick="sortTable('einzahlungen','betrag')">Betrag ${sortArrowTbl('einzahlungen','betrag')}</th><th>Geändert</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>`}`;
 }
 
@@ -927,7 +947,7 @@ function modalEin(id){
   const tnOpts=state.teilnehmer.filter(t=>!t.geloescht).map(t=>`<option${isEdit&&e.teilnehmer===t.name?' selected':''}>${t.name}</option>`).join('');
   const isAusz = isEdit && e.typ==='Auszahlung';
   openModal(isEdit?(isAusz?'Auszahlung bearbeiten':'Einzahlung bearbeiten'):'Einzahlung eintragen',`
-    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option>${tnOpts}</select></div>
+    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option><option value="__ALLE__">👥 Alle Teilnehmer (anteilig)</option>${tnOpts}</select></div>
     ${isEdit?`<div class="form-group"><label>Typ</label>
       <select id="ei-typ">
         <option value="Einzahlung"${!isAusz?' selected':''}>💚 Einzahlung</option>
@@ -950,6 +970,16 @@ function modalEin(id){
 async function saveEin(id,typ){
   const t=document.getElementById('ei-t').value,b=document.getElementById('ei-b').value;
   if(!t||!b){alert('Pflichtfelder ausfüllen');return}
+  // Alle Teilnehmer
+  if(t==='__ALLE__'){
+    await saveEinAlleAufteilen(
+      document.getElementById('ei-d').value,
+      Number(b),
+      document.getElementById('ei-art').value,
+      document.getElementById('ei-zweck').value
+    );
+    return;
+  }
   setSyncStatus('syncing','Speichere...');
   const data={teilnehmer:t,datum:document.getElementById('ei-d').value,betrag:Number(b),
     typ:typ||document.getElementById('ei-typ')?.value||'Einzahlung',
@@ -969,7 +999,7 @@ function modalAuszahlung(){
     <div style="background:#fce4ec;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;color:#721c24">
       💸 Auszahlungen werden vom Guthaben des Teilnehmers abgezogen. Nur nach Abrechnung verwenden!
     </div>
-    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option>${tnOpts}</select></div>
+    <div class="form-group"><label>Teilnehmer *</label><select id="ei-t"><option value="">– auswählen –</option><option value="__ALLE__">👥 Alle Teilnehmer (anteilig)</option>${tnOpts}</select></div>
     <div class="form-row">
       <div class="form-group"><label>Datum</label><input id="ei-d" type="date" value="${today()}"></div>
       <div class="form-group"><label>Betrag (€) *</label><input id="ei-b" type="number" step="0.01"></div>
@@ -991,9 +1021,13 @@ function renderKassenbuch(){
   const hint=`<div class="section-hint">📒 <strong>Kassenbuch</strong>: Alle Ausgaben und Einnahmen der Gruppenkasse. Hier landen z.B. Campinggebühren, gemeinsame Aktivitäten, Rückerstattungen. Einkäufe für Lebensmittel etc. im Reiter "Einkäufe" erfassen!</div>`;
   const data=state.kassenbuch;
   const aktiv=data.filter(e=>!e.geloescht);
-  const total=aktiv.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalAusgaben=aktiv.filter(e=>e.typ!=='Einnahme').reduce((s,e)=>s+Number(e.betrag),0);
+  const totalEinnahmen=aktiv.filter(e=>e.typ==='Einnahme').reduce((s,e)=>s+Number(e.betrag),0);
+  const total=totalAusgaben-totalEinnahmen;
 
-  const rows=data.map(e=>`
+  let sortedKbData = applySearch(data, 'kassenbuch', ['datum','beschreibung','kategorie','bezahlt_von','typ']);
+  sortedKbData = applySort(sortedKbData, 'kassenbuch');
+  const rows=sortedKbData.map(e=>`
     <tr class="${e.geloescht?'geloescht':''}">
       <td>${e.datum}</td>
       <td>${badge(e.typ,e.typ==='Einnahme'?'green':'red')}</td>
@@ -1014,13 +1048,16 @@ function renderKassenbuch(){
     <div class="section-header">
       <h2>📒 Kassenbuch ${activeYear}</h2>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        ${badge('Ausgaben: '+fmt(total),'red')}
+        ${badge('Ausgaben: '+fmt(totalAusgaben),'red')}${totalEinnahmen>0?badge(' Einnahmen: '+fmt(totalEinnahmen),'green'):''}${badge(' Saldo: '+fmt(total),total<=0?'green':'red')}
         ${canWrite()?`<button class="btn btn-primary btn-sm" onclick="modalKb()">+ Eintrag</button>`:''}
       </div>
     </div>
-    ${aktiv.length===0?`<div class="card empty"><div class="emoji">📒</div><p>Kein Eintrag</p></div>`:
-    `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
-      <thead><tr><th>Datum</th><th>Typ</th><th>Kategorie</th><th>Beschreibung</th><th>Zahlung</th><th>Betrag</th><th>Bezahlt von</th><th>Geändert</th><th></th></tr></thead>
+    <div class="search-bar">
+      <input type="text" placeholder="🔍 Suchen (Beschreibung, Kategorie, Bezahlt von...)" value="${tableSearch['kassenbuch']||''}" oninput="filterTable('kassenbuch',this.value)">
+    </div>
+    ${aktiv.length===0?`<div class="card empty"><div class="emoji">📒</div><p>Kein Eintrag</p></div>`:`
+    <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+      <thead><tr><th class='sortable' onclick="sortTable('kassenbuch','datum')">Datum ${sortArrowTbl('kassenbuch','datum')}</th><th>Typ</th><th class='sortable' onclick="sortTable('kassenbuch','kategorie')">Kategorie ${sortArrowTbl('kassenbuch','kategorie')}</th><th class='sortable' onclick="sortTable('kassenbuch','beschreibung')">Beschreibung ${sortArrowTbl('kassenbuch','beschreibung')}</th><th>Zahlung</th><th class='sortable' onclick="sortTable('kassenbuch','betrag')">Betrag ${sortArrowTbl('kassenbuch','betrag')}</th><th class='sortable' onclick="sortTable('kassenbuch','bezahlt_von')">Bezahlt von ${sortArrowTbl('kassenbuch','bezahlt_von')}</th><th>Geändert</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>`}`;
 }
 
@@ -1072,9 +1109,13 @@ function renderEinkaufe(){
   const hint=`<div class="section-hint">🛒 <strong>Einkäufe</strong>: Einkäufe für die gesamte Gruppe (Lebensmittel, Getränke etc.). Wenn ein Artikel nur für eine Person ist, kann dieser als offener Posten dem Teilnehmer zugeordnet werden. Bezahler erhält eine Gutschrift in der Abrechnung.</div>`;
   const data=state.einkaufe;
   const aktiv=data.filter(e=>!e.geloescht);
-  const total=aktiv.reduce((s,e)=>s+Number(e.betrag),0);
+  const totalAusgaben=aktiv.filter(e=>e.typ!=='Einnahme').reduce((s,e)=>s+Number(e.betrag),0);
+  const totalEinnahmen=aktiv.filter(e=>e.typ==='Einnahme').reduce((s,e)=>s+Number(e.betrag),0);
+  const total=totalAusgaben-totalEinnahmen;
 
-  const rows=data.map(e=>`
+  let sortedEkData = applySearch(data, 'einkaufe', ['datum','markt','produkt','kategorie','bezahlt_von']);
+  sortedEkData = applySort(sortedEkData, 'einkaufe');
+  const rows=sortedEkData.map(e=>`
     <tr class="${e.geloescht?'geloescht':''}">
       <td>${e.datum}</td>
       <td><strong>${e.markt||'–'}</strong></td>
@@ -1099,9 +1140,12 @@ function renderEinkaufe(){
         ${canWrite()?`<button class="btn btn-primary btn-sm" onclick="modalEk()">+ Einkauf</button>`:''}
       </div>
     </div>
-    ${aktiv.length===0?`<div class="card empty"><div class="emoji">🛒</div><p>Noch keine Einkäufe</p></div>`:
-    `<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
-      <thead><tr><th>Datum</th><th>Markt</th><th>Produkt</th><th>Kategorie</th><th>Zahlung</th><th>Betrag</th><th>Bezahlt von</th><th>Geändert</th><th></th></tr></thead>
+    <div class="search-bar">
+      <input type="text" placeholder="🔍 Suchen (Markt, Produkt, Kategorie, Bezahlt von...)" value="${tableSearch['einkaufe']||''}" oninput="filterTable('einkaufe',this.value)">
+    </div>
+    ${aktiv.length===0?`<div class="card empty"><div class="emoji">🛒</div><p>Noch keine Einkäufe</p></div>`:`
+    <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table>
+      <thead><tr><th class='sortable' onclick="sortTable('einkaufe','datum')">Datum ${sortArrowTbl('einkaufe','datum')}</th><th class='sortable' onclick="sortTable('einkaufe','markt')">Markt ${sortArrowTbl('einkaufe','markt')}</th><th class='sortable' onclick="sortTable('einkaufe','produkt')">Produkt ${sortArrowTbl('einkaufe','produkt')}</th><th>Kategorie</th><th>Zahlung</th><th class='sortable' onclick="sortTable('einkaufe','betrag')">Betrag ${sortArrowTbl('einkaufe','betrag')}</th><th class='sortable' onclick="sortTable('einkaufe','bezahlt_von')">Bezahlt von ${sortArrowTbl('einkaufe','bezahlt_von')}</th><th>Geändert</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>`}`;
 }
 
@@ -1235,11 +1279,10 @@ function berechneSaldo(teilnehmerName){
   // muss sein persönlicher OP-Anteil aus dem Soll herausgerechnet werden.
   const opBezahlt=state.offenePosten.filter(o=>o.bezahlt&&o.teilnehmer===teilnehmerName).reduce((s,o)=>s+Number(o.betrag),0);
 
-  const kostenfrei=t.kostenfrei===true;
+  const tn=state.teilnehmer.find(x=>x.name===teilnehmerName);
+  const kostenfrei=tn&&tn.kostenfrei===true;
   // Kostenfrei = keine Standplatz/Camping-Kosten, aber Gemeinschaftskosten (Lebensmittel etc.)
-  const sollOhneKostenfrei=(tage*kpt)+fzEinzeln+fzAnteil+(tage*stromKptag)+(tage*dkKptag)+dkEinzeln-gutschrift-opBezahlt;
-  const sollMitKostenfrei=sollOhneKostenfrei+(kostenfrei?0:(tage*spKptag)+(tage*campingKptag));
-  const soll=sollMitKostenfrei;
+  const soll=(tage*kpt)+fzEinzeln+fzAnteil+(tage*spKptag)+(tage*campingKptag)+(tage*stromKptag)+(tage*dkKptag)+dkEinzeln-gutschrift-opBezahlt;
 
   // Eingezahlt (Einzahlungen minus Auszahlungen)
   const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===teilnehmerName&&e.typ!=='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0)
@@ -1470,7 +1513,7 @@ function renderAbrechnung(){
   const dkVerbrauchAlle=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart!=='einzeln').reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
   const dkKptag=ptage>0?dkVerbrauchAlle/ptage:0;
   // Einzeln abgerechnete DK direkt dem Teilnehmer belasten
-  const dkEinzeln=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart==='einzeln'&&d.teilnehmer===teilnehmerName).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
+  // dkEinzeln wird pro Teilnehmer berechnet (unten im abr.map)
 
   const totalKb=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
   const totalEk=state.einkaufe.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
@@ -1478,16 +1521,20 @@ function renderAbrechnung(){
   const fzAufteilen=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart!=='einzeln'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
   const gemKosten=totalAus-state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
   const kpt=ptage>0?gemKosten/ptage:0;
-  const gesamtGesamt=totalAus+spGesamt+campingKptag*ptage+totalStrom+dkVerbrauch;
+  const dkVerbrauch=dkVerbrauchAlle;
+  const fzKostenGesamt=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart!=='standplatz'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
+  const gesamtGesamt=totalAus+fzKostenGesamt+spGesamt+campingKptag*ptage+totalStrom+dkVerbrauchAlle;
+
 
   const tiles=[
-    {val:fmt(totalAus),lbl:'Kassenausgaben',bg:'#fce4ec'},
-    {val:`${spProTag>0?fmt(spGesamt):'–'} (${spTage} T)`,lbl:'Standplatz',bg:'#f3e5f5'},
-    {val:fmt(campingKptag*ptage),lbl:'Camping',bg:'#fff3e0'},
-    {val:fmt(totalStrom),lbl:'Strom',bg:'#fff9e6'},
-    {val:fmt(dkVerbrauch),lbl:'Duschkarten',bg:'#e3f2fd'},
-    {val:fmt(gesamtGesamt),lbl:'Gesamtkosten',bg:'#e8f5e9'},
-    {val:ptage+' T',lbl:'Personentage',bg:'#f0f7f0'},
+    {val:fmt(totalAus),                                          lbl:'Kassenausgaben',    bg:'#fce4ec'},
+    {val:fmt(fzKostenGesamt),                                    lbl:'Fahrzeugkosten',    bg:'#fff3e0'},
+    {val:`${spProTag>0?fmt(spGesamt):'–'} (${spTage} T)`,       lbl:'Standplatz',        bg:'#f3e5f5'},
+    {val:fmt(campingKptag*ptage),                                lbl:'Camping',           bg:'#ffe0b2'},
+    {val:fmt(totalStrom),                                        lbl:'Strom',             bg:'#fff9e6'},
+    {val:fmt(dkVerbrauchAlle),                                   lbl:'Duschkarten',       bg:'#e3f2fd'},
+    {val:fmt(gesamtGesamt),                                      lbl:'Gesamtkosten',      bg:'#e8f5e9'},
+    {val:ptage+' T',                                             lbl:'Personentage',      bg:'#f0f7f0'},
   ];
 
   const abr=aktTN.map(t=>{
@@ -1507,8 +1554,10 @@ function renderAbrechnung(){
     const campK=tage*campingKptag;
     const stromK=tage*stromKptag;
     const dkK=tage*dkKptag;
-    const kostenfrei=t.kostenfrei===true;
-    const soll=gk+fzEinzeln+fzAnteil+(kostenfrei?0:standK+campK)+stromK+dkK+dkKEinzeln-gutschrift-(opBezahltTN||0);
+    const dkKEinzeln=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart==='einzeln'&&d.teilnehmer===t.name).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
+    const tn=state.teilnehmer.find(x=>x.name===teilnehmerName);
+  const kostenfrei=tn&&tn.kostenfrei===true;
+    const soll=gk+fzEinzeln+fzAnteil+standK+campK+stromK+dkK+dkKEinzeln-gutschrift-(opBezahltTN||0);
     const saldo=eingezahlt-soll;
     // Offene Posten für diesen Teilnehmer (unbezahlt)
     const opOffen=state.offenePosten.filter(o=>!o.bezahlt&&o.teilnehmer===t.name);
@@ -1552,7 +1601,21 @@ function renderAbrechnung(){
         <tbody>${tableRows}</tbody>
       </table></div>
     </div>
-    <div class="card"><h3>💸 Zahlungsausgleich</h3>${payHTML}</div>`}`;
+    <div class="card"><h3>💸 Zahlungsausgleich</h3>${payHTML}</div>
+         <div class="card">
+           <h3>📊 Kostenaufschlüsselung – Wie kommen die Gesamtkosten zustande?</h3>
+           <div style="font-size:12px;color:var(--mu);margin-bottom:10px">Vollständige Aufschlüsselung aller Kostenpositionen:</div>
+           <table style="width:100%;font-size:13px;border-collapse:collapse">
+             <tr style="border-bottom:1px solid var(--bd)"><td style="padding:5px 0;color:var(--mu)">Kassenausgaben (Kassenbuch + Einkäufe)</td><td style="text-align:right;font-weight:600">${fmt(totalAus)}</td></tr>
+             <tr style="border-bottom:1px solid var(--bd)"><td style="padding:5px 0;color:var(--mu)">+ Fahrzeugkosten gesamt</td><td style="text-align:right;font-weight:600">${fmt(fzKostenGesamt)}</td></tr>
+             <tr style="border-bottom:1px solid var(--bd)"><td style="padding:5px 0;color:var(--mu)">+ Standplatzgebühr (${spAnzahl}× ${fmt(spProTag)}/Tag × ${spTage} Tage${spRabatt>0?' − '+spRabatt+'% Rabatt':''})</td><td style="text-align:right;font-weight:600">${fmt(spGesamt)}</td></tr>
+             <tr style="border-bottom:1px solid var(--bd)"><td style="padding:5px 0;color:var(--mu)">+ Campinggebühr (${fmt(campingKptag)}/Person/Tag × ${ptage} Personentage)</td><td style="text-align:right;font-weight:600">${fmt(campingKptag*ptage)}</td></tr>
+             <tr style="border-bottom:1px solid var(--bd)"><td style="padding:5px 0;color:var(--mu)">+ Stromkosten</td><td style="text-align:right;font-weight:600">${fmt(totalStrom)}</td></tr>
+             <tr style="border-bottom:1px solid var(--bd)"><td style="padding:5px 0;color:var(--mu)">+ Duschkarten (aufgeteilt)</td><td style="text-align:right;font-weight:600">${fmt(dkVerbrauchAlle)}</td></tr>
+             <tr style="border-top:2px solid var(--gm);font-weight:700;background:var(--gp)"><td style="padding:8px 4px">= Gesamtkosten</td><td style="text-align:right;font-size:15px;padding:8px 4px">${fmt(gesamtGesamt)}</td></tr>
+             <tr><td style="padding:6px 0;color:var(--mu)">÷ ${ptage} Personentage = Kosten pro Person/Tag</td><td style="text-align:right;font-weight:600;color:var(--gm)">${fmt(ptage>0?gesamtGesamt/ptage:0)}</td></tr>
+           </table>
+         </div>`}`;
 }
 
 function saldoFuerOP(name,saldo){
@@ -1658,7 +1721,13 @@ function renderEinstellungen(){
 
     <div class="card">
       <h3>⛺ Standplatzgebühr</h3>
-      ${(()=>{const spFz=state.fahrzeuge.find(f=>f.standplatz_fahrzeug&&!f.geloescht);return spFz?`<div style="background:#e8f5e9;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px;color:var(--gd)">🅿️ Kostenloses Standplatz-Fahrzeug: <strong>${spFz.halter}</strong> (${spFz.typ||'Fahrzeug'})</div>`:'<div style="background:#fff9e6;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px;color:#856404">⚠️ Noch kein kostenloses Standplatz-Fahrzeug definiert (bei Fahrzeuge einstellen)</div>'})()}
+      ${(()=>{
+        const spFzList=state.fahrzeuge.filter(f=>(f.standplatz_fahrzeug||f.kostenart==='standplatz')&&!f.geloescht);
+        return spFzList.length>0
+          ?'<div style="background:#e8f5e9;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px;color:var(--gd)">🅿️ Kostenlose Standplatz-Fahrzeuge ('+spFzList.length+'): '
+            +spFzList.map(f=>'<strong>'+f.halter+'</strong> ('+( f.typ||'Fahrzeug')+')').join(', ')+'</div>'
+          :'<div style="background:#fff9e6;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px;color:#856404">⚠️ Noch kein kostenloses Standplatz-Fahrzeug definiert (bei Fahrzeuge → Kostenabrechnung = Standplatz-Fahrzeug)</div>';
+      })()}
       <div class="form-row">
         <div class="form-group"><label>Anreise Standplatz</label><input type="date" id="sp-an" value="${es.standplatzAnreise||''}" onchange="saveEinstellung('standplatzAnreise',this.value)"></div>
         <div class="form-group"><label>Abreise Standplatz</label><input type="date" id="sp-ab" value="${es.standplatzAbreise||''}" onchange="saveEinstellung('standplatzAbreise',this.value)"></div>
@@ -1705,6 +1774,24 @@ function renderEinstellungen(){
     </div>
 
     <div class="card">
+      <h3>💰 Personenrabatt</h3>
+      <p style="font-size:13px;color:var(--mu);margin-bottom:12px">Rabatt auf den individuellen Kostenanteil einzelner Teilnehmer (z.B. für Kinder oder Gäste).</p>
+      <div id="person-rabatt-list">
+        ${state.teilnehmer.filter(t=>!t.geloescht).map(t=>`
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+            <span style="font-weight:600;min-width:120px;font-size:13px">${t.name}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="number" min="0" max="100" step="1" value="${t.rabatt||0}"
+                style="width:70px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--bd);font-size:13px"
+                onchange="saveTeilnehmerRabatt(${t.id},this.value)">
+              <span style="font-size:13px;color:var(--mu)">% Rabatt</span>
+            </div>
+            ${(t.rabatt||0)>0?badge((t.rabatt)+'% Rabatt','orange'):''}
+          </div>`).join('')||'<p style="font-size:13px;color:#999">Keine Teilnehmer vorhanden</p>'}
+      </div>
+    </div>
+
+    <div class="card">
       <h3>🔑 Mein Passwort ändern</h3>
       <div class="form-group"><label>Neues Passwort</label><input type="password" id="my-pw-new" placeholder="Neues Passwort"></div>
       <div class="form-group"><label>Wiederholen</label><input type="password" id="my-pw-rep" placeholder="••••••"></div>
@@ -1743,9 +1830,62 @@ async function addJahr(){
   if(!j){alert('Jahr eingeben');return}
   setSyncStatus('syncing','Speichere...');
   try{
-    await sbInsert('jahre',{jahr:Number(j),bezeichnung:b,aktiv:false});
+    const r=await sbInsert('jahre',{jahr:Number(j),bezeichnung:b,aktiv:false});
     await logActivity('erstellt','Jahr '+j,'jahre',null);
     await loadAll();
+    // Anbieten Teilnehmer zu übernehmen
+    if(state.teilnehmer.length>0){
+      const prev=state.teilnehmer.filter(t=>!t.geloescht);
+      if(prev.length>0){
+        openModal('Teilnehmer übernehmen?',
+          '<p style="font-size:13px;margin-bottom:14px">Sollen Teilnehmer aus dem aktuellen Jahr in das neue Jahr '+j+' übernommen werden?</p>'
+          +'<p style="font-size:12px;color:var(--mu);margin-bottom:14px">Nur Name, Vorname und Geburtsdatum werden übernommen. Anreise/Abreise/Fahrzeug müssen neu eingetragen werden.</p>'
+          +'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Nein</button><button class="btn btn-primary" onclick="uebernehmeTeílnehmer('+j+')">Ja, übernehmen</button></div>'
+        );
+      }
+    }
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+async function uebernehmeTeílnehmer(neuesJahr){
+  setSyncStatus('syncing','Übernehme...');
+  closeModal();
+  const vorjahr=activeYear;
+  try{
+    const prev=await sbGet('teilnehmer','jahr=eq.'+vorjahr);
+    for(const t of prev.filter(x=>!x.geloescht)){
+      await sbInsert('teilnehmer',{
+        name:t.name,geburtsdatum:t.geburtsdatum||null,
+        kontakt:t.kontakt||null,
+        jahr:neuesJahr,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()
+      });
+    }
+    // Frage nach Fahrzeugen
+    const prevFz=await sbGet('fahrzeuge','jahr=eq.'+vorjahr);
+    if(prevFz.filter(f=>!f.geloescht).length>0){
+      openModal('Fahrzeuge übernehmen?',
+        '<p style="font-size:13px;margin-bottom:14px">Sollen auch die Fahrzeuge übernommen werden?</p>'
+        +'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Nein</button><button class="btn btn-primary" onclick="uebernehmeFahrzeuge('+neuesJahr+','+vorjahr+')">Ja</button></div>'
+      );
+    }else{
+      activeYear=neuesJahr;await loadAll();
+    }
+    await logActivity('erstellt','Teilnehmer übernommen nach '+neuesJahr,'teilnehmer',null);
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+async function uebernehmeFahrzeuge(neuesJahr,vorjahr){
+  closeModal();setSyncStatus('syncing','Übernehme Fahrzeuge...');
+  try{
+    const prevFz=await sbGet('fahrzeuge','jahr=eq.'+vorjahr);
+    for(const f of prevFz.filter(x=>!x.geloescht)){
+      await sbInsert('fahrzeuge',{
+        halter:f.halter,typ:f.typ,kosten:f.kosten||0,
+        kostenart:f.kostenart||'aufteilen',standplatz_fahrzeug:f.standplatz_fahrzeug||false,
+        jahr:neuesJahr,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()
+      });
+    }
+    activeYear=neuesJahr;await loadAll();
   }catch(e){setSyncStatus('error',e.message)}
 }
 
@@ -1914,17 +2054,18 @@ function printAbrechnung(){
   const dkVerbrauchAlle=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart!=='einzeln').reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
   const dkKptag=ptage>0?dkVerbrauchAlle/ptage:0;
   // Einzeln abgerechnete DK direkt dem Teilnehmer belasten
-  const dkEinzeln=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart==='einzeln'&&d.teilnehmer===teilnehmerName).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
   const totalKb=state.kassenbuch.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
   const totalEk=state.einkaufe.filter(e=>!e.geloescht).reduce((s,e)=>s+Number(e.betrag),0);
   const totalAus=totalKb+totalEk;
   const fzAufteilen=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart!=='einzeln'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
+  const fzKostenGesamt=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart!=='standplatz'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
   const gemKosten=totalAus-state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug).reduce((s,f)=>s+Number(f.kosten||0),0);
   const kpt=ptage>0?gemKosten/ptage:0;
 
   const abr=aktTN.map(t=>{
     const tage=Number(t.tage)||0;
     const eingezahlt=state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name&&e.typ!=='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0)-state.einzahlungen.filter(e=>!e.geloescht&&e.teilnehmer===t.name&&e.typ==='Auszahlung').reduce((s,e)=>s+Number(e.betrag),0);
+    const dkKEinzeln=state.duschkarten.filter(d=>d.abgerechnet&&d.kostenart==='einzeln'&&d.teilnehmer===t.name).reduce((s,d)=>s+(Number(d.kartenwert||10)-Number(d.restwert||0)),0);
     const fzEinzeln=state.fahrzeuge.filter(f=>!f.geloescht&&f.kostenart==='einzeln'&&!f.standplatz_fahrzeug&&f.halter===t.name).reduce((s,f)=>s+Number(f.kosten||0),0);
     const fzAnteil=ptage>0?(fzAufteilen/ptage)*tage:0;
     const gutschrift=state.einkaufe.filter(e=>!e.geloescht&&e.bezahlt_von===t.name).reduce((s,e)=>s+Number(e.betrag),0)
@@ -1967,8 +2108,13 @@ function printAbrechnung(){
     ${state.duschkarten.filter(d=>d.abgerechnet).map(d=>`<tr><td>${d.teilnehmer}</td><td>${fmt(d.kartenwert||10)}</td><td>${fmt(d.restwert)}</td>
     <td class="neg">${fmt((d.kartenwert||10)-(d.restwert||0))}</td><td>${fmtDT(d.checkout_am)}</td></tr>`).join('')||'<tr><td colspan="5">Keine abgerechneten Karten</td></tr>'}
     </table>
-    <script>window.onload=()=>window.print()<\/script></body></html>`);
+    <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`);
   w.document.close();
+  const closeBtn=w.document.createElement('button');
+  closeBtn.textContent='✕ Schließen & Zurück';
+  closeBtn.setAttribute('style','position:fixed;top:10px;right:10px;background:#c0392b;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:14px;cursor:pointer;z-index:9999;font-weight:600');
+  closeBtn.onclick=function(){w.close();};
+  w.document.body.appendChild(closeBtn);
 }
 
 
@@ -2147,6 +2293,91 @@ async function schnellJahrAnlegen(jahr){
     await loadAll();
     // Zu Einstellungen Tab wechseln damit man die Bestätigung sieht
     setSyncStatus('ok','✅ Jahr '+jahr+' ist jetzt aktiv!');
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+
+// ── Sort & Search state ──────────────────────────────────
+const tableSort={};
+const tableSearch={};
+
+function sortTable(tbl, col){
+  if(!tableSort[tbl])tableSort[tbl]={col:null,dir:1};
+  const s=tableSort[tbl];
+  s.dir=s.col===col?s.dir*-1:1;
+  s.col=col;
+  renderMain();
+}
+
+function filterTable(tbl, val){
+  tableSearch[tbl]=val.toLowerCase();
+  renderMain();
+}
+
+function applySort(arr, tbl){
+  const s=tableSort[tbl];
+  if(!s||!s.col)return arr;
+  return [...arr].sort((a,b)=>{
+    const va=String(a[s.col]||''),vb=String(b[s.col]||'');
+    return va.localeCompare(vb,'de')*s.dir;
+  });
+}
+
+function applySearch(arr, tbl, fields){
+  const q=tableSearch[tbl]||'';
+  if(!q)return arr;
+  return arr.filter(r=>fields.some(f=>String(r[f]||'').toLowerCase().includes(q)));
+}
+
+function sortArrowTbl(tbl,col){
+  const s=tableSort[tbl];
+  if(!s||s.col!==col)return '⇅';
+  return s.dir===1?'▲':'▼';
+}
+
+// ── confirmDelEin ────────────────────────────────────────
+function confirmDelEin(id,name){
+  openModal('Einzahlung löschen?',
+    '<p style="font-size:14px;margin-bottom:16px">Einzahlung von <strong>'+name+'</strong> löschen?</p>'
+    +'<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>'
+    +'<button class="btn btn-danger" style="padding:9px 16px;font-size:13px" onclick="doDelEin('+id+')">Löschen</button></div>'
+  );
+}
+async function doDelEin(id){
+  setSyncStatus('syncing','Lösche...');
+  try{
+    await sbUpdate('einzahlungen',id,{geloescht:true,geaendert_von:currentUser.username});
+    await logActivity('geloescht','Einzahlung','einzahlungen',id);
+    closeModal();await loadAll();
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+// ── saveTeilnehmerRabatt ─────────────────────────────────
+async function saveTeilnehmerRabatt(id, val){
+  try{
+    await sbUpdate('teilnehmer',id,{rabatt:Number(val)||0});
+    // Update local state
+    const t=state.teilnehmer.find(x=>x.id===id);
+    if(t)t.rabatt=Number(val)||0;
+  }catch(e){setSyncStatus('error',e.message)}
+}
+
+// ── "Alle" Einzahlung aufteilen ──────────────────────────
+async function saveEinAlleAufteilen(datum, betrag, zahlungsart, zweck){
+  const aktTN=state.teilnehmer.filter(t=>!t.geloescht);
+  if(!aktTN.length){alert('Keine Teilnehmer vorhanden');return;}
+  const anteil=betrag/aktTN.length;
+  setSyncStatus('syncing','Speichere für alle...');
+  try{
+    for(const t of aktTN){
+      await sbInsert('einzahlungen',{
+        teilnehmer:t.name,datum,betrag:anteil,
+        typ:'Einzahlung',zahlungsart,verwendungszweck:zweck||'Sammeleinzahlung',
+        jahr:activeYear,geaendert_von:currentUser.username,geaendert_am:new Date().toISOString()
+      });
+    }
+    await logActivity('erstellt','Sammeleinzahlung '+fmt(betrag)+' auf '+aktTN.length+' TN','einzahlungen',null);
+    closeModal();await loadAll();
   }catch(e){setSyncStatus('error',e.message)}
 }
 
