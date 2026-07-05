@@ -1916,70 +1916,137 @@ let _uebernahmeData = {neuesJahr:null, vorjahr:null, teilnehmer:[], fahrzeuge:{}
 
 async function zeigeUebernehmeAuswahl(neuesJahr, prevTN){
   const vorjahr=activeYear;
-  // Fahrzeugdaten des Vorjahres laden
   let prevFz=[];
   try{ prevFz=await sbGet('fahrzeuge','jahr=eq.'+vorjahr); }catch(e){}
   const aktFz=prevFz.filter(f=>!f.geloescht);
-
-  // Fahrzeuge nach Halter gruppieren
   const fzByHalter={};
   aktFz.forEach(f=>{fzByHalter[f.halter]=f;});
-
   _uebernahmeData={neuesJahr, vorjahr, teilnehmer:prevTN, fahrzeuge:fzByHalter};
 
-  // Selektions-Modal aufbauen
-  let html='<p style="font-size:13px;color:var(--mu);margin-bottom:14px">Wähle welche Teilnehmer in das Jahr '+neuesJahr+' übernommen werden sollen:</p>';
-  html+='<div style="max-height:60vh;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;padding:6px">';
-  
+  // Modal öffnen mit leerem Container
+  openModal('Teilnehmer für '+neuesJahr+' übernehmen', '<div id="uebernahme-container"></div>');
+
+  // DOM direkt befüllen (kein Template-String → Checkboxen bleiben interaktiv)
+  const container=document.getElementById('uebernahme-container');
+
+  const intro=document.createElement('p');
+  intro.style.cssText='font-size:13px;color:var(--mu);margin-bottom:12px';
+  intro.textContent='Wähle welche Teilnehmer in das Jahr '+neuesJahr+' übernommen werden sollen:';
+  container.appendChild(intro);
+
+  const listWrap=document.createElement('div');
+  listWrap.style.cssText='max-height:55vh;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;margin-bottom:10px';
+  container.appendChild(listWrap);
+
   prevTN.forEach((t,i)=>{
     const fz=fzByHalter[t.name];
-    const hasFz=!!fz;
-    html+=`<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:6px">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;text-transform:none;font-size:14px">
-        <input type="checkbox" id="tn-check-${i}" checked style="width:18px!important;height:18px;flex-shrink:0;accent-color:var(--gm)">
-        <span>${t.name}${t.geburtsdatum?' <span style="font-size:11px;color:var(--mu)">(*'+t.geburtsdatum+')</span>':''}</span>
-      </label>`;
-    if(hasFz){
-      html+=`<div id="fz-check-wrap-${i}" style="margin-left:28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-size:13px;color:var(--bl);font-weight:500">
-          <input type="checkbox" id="fz-check-${i}" checked style="width:16px!important;height:16px;flex-shrink:0;accent-color:var(--bl)">
-          🚗 Fahrzeug übernehmen: ${fz.typ||'PKW'} (${t.fahrzeughalter||t.name}) – Kennzeichen: ${fz.kennzeichen||t.kennzeichen||'–'}
-        </label>
-      </div>`;
+
+    const row=document.createElement('div');
+    row.style.cssText='padding:10px 14px;border-bottom:1px solid #f0f0f0';
+
+    // Teilnehmer Checkbox
+    const tnLabel=document.createElement('label');
+    tnLabel.style.cssText='display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:14px;margin-bottom:4px';
+
+    const tnCb=document.createElement('input');
+    tnCb.type='checkbox';
+    tnCb.id='tn-cb-'+i;
+    tnCb.checked=true;
+    tnCb.style.cssText='width:18px;height:18px;flex-shrink:0;accent-color:var(--gm);cursor:pointer';
+
+    const tnText=document.createElement('span');
+    tnText.textContent=t.name+(t.geburtsdatum?' (*'+t.geburtsdatum+')':'');
+    if(t.geburtsdatum){
+      const geb=tnText.querySelector? null:null;
+      tnText.innerHTML=t.name+(t.geburtsdatum?' <span style="font-size:11px;font-weight:400;color:var(--mu)">(*'+t.geburtsdatum+')</span>':'');
     }
-    html+=`</div>`;
+
+    tnLabel.appendChild(tnCb);
+    tnLabel.appendChild(tnText);
+    row.appendChild(tnLabel);
+
+    // Fahrzeug Checkbox wenn vorhanden
+    if(fz){
+      const fzRow=document.createElement('div');
+      fzRow.style.cssText='margin-left:28px;margin-top:4px';
+
+      const fzLabel=document.createElement('label');
+      fzLabel.style.cssText='display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1565c0;font-weight:500';
+
+      const fzCb=document.createElement('input');
+      fzCb.type='checkbox';
+      fzCb.id='fz-cb-'+i;
+      fzCb.checked=true;
+      fzCb.style.cssText='width:16px;height:16px;flex-shrink:0;accent-color:#1565c0;cursor:pointer';
+
+      const kz=fz.kennzeichen||t.kennzeichen||'–';
+      const fzText=document.createElement('span');
+      fzText.textContent='🚗 Fahrzeug: '+(fz.typ||'PKW')+' · Kennzeichen: '+kz;
+
+      fzLabel.appendChild(fzCb);
+      fzLabel.appendChild(fzText);
+      fzRow.appendChild(fzLabel);
+      row.appendChild(fzRow);
+
+      // Fahrzeug-Checkbox folgt Teilnehmer-Checkbox
+      tnCb.addEventListener('change', function(){
+        if(!this.checked) fzCb.checked=false;
+      });
+    }
+
+    listWrap.appendChild(row);
   });
 
-  html+='</div>';
-  html+=`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-    <button onclick="alleAbwaehlen()" class="btn btn-ghost btn-sm">Alle abwählen</button>
-    <button onclick="alleAuswaehlen()" class="btn btn-ghost btn-sm">Alle auswählen</button>
-  </div>`;
-  html+=`<div class="modal-actions" style="margin-top:10px">
-    <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-    <button class="btn btn-primary" onclick="doUebernehme()">✅ Ausgewählte übernehmen</button>
-  </div>`;
+  // Buttons Alle/Keine
+  const btnRow=document.createElement('div');
+  btnRow.style.cssText='display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap';
 
-  openModal('Teilnehmer für '+neuesJahr+' übernehmen', html);
+  const btnAlle=document.createElement('button');
+  btnAlle.className='btn btn-ghost btn-sm';
+  btnAlle.textContent='☑️ Alle auswählen';
+  btnAlle.onclick=function(){
+    prevTN.forEach((_,i)=>{
+      const c=document.getElementById('tn-cb-'+i);
+      const f=document.getElementById('fz-cb-'+i);
+      if(c)c.checked=true;
+      if(f)f.checked=true;
+    });
+  };
+
+  const btnKeine=document.createElement('button');
+  btnKeine.className='btn btn-ghost btn-sm';
+  btnKeine.textContent='⬜ Alle abwählen';
+  btnKeine.onclick=function(){
+    prevTN.forEach((_,i)=>{
+      const c=document.getElementById('tn-cb-'+i);
+      const f=document.getElementById('fz-cb-'+i);
+      if(c)c.checked=false;
+      if(f)f.checked=false;
+    });
+  };
+  btnRow.appendChild(btnAlle);
+  btnRow.appendChild(btnKeine);
+  container.appendChild(btnRow);
+
+  // Aktions-Buttons
+  const actions=document.createElement('div');
+  actions.className='modal-actions';
+
+  const btnAbbruch=document.createElement('button');
+  btnAbbruch.className='btn btn-ghost';
+  btnAbbruch.textContent='Abbrechen';
+  btnAbbruch.onclick=closeModal;
+
+  const btnOK=document.createElement('button');
+  btnOK.className='btn btn-primary';
+  btnOK.textContent='✅ Ausgewählte übernehmen';
+  btnOK.onclick=doUebernehme;
+
+  actions.appendChild(btnAbbruch);
+  actions.appendChild(btnOK);
+  container.appendChild(actions);
 }
 
-function alleAbwaehlen(){
-  _uebernahmeData.teilnehmer.forEach((_,i)=>{
-    const cb=document.getElementById('tn-check-'+i);
-    const fz=document.getElementById('fz-check-'+i);
-    if(cb)cb.checked=false;
-    if(fz)fz.checked=false;
-  });
-}
-
-function alleAuswaehlen(){
-  _uebernahmeData.teilnehmer.forEach((_,i)=>{
-    const cb=document.getElementById('tn-check-'+i);
-    const fz=document.getElementById('fz-check-'+i);
-    if(cb)cb.checked=true;
-    if(fz)fz.checked=true;
-  });
-}
 
 async function doUebernehme(){
   const {neuesJahr, vorjahr, teilnehmer, fahrzeuge}=_uebernahmeData;
@@ -1988,7 +2055,7 @@ async function doUebernehme(){
   let count=0;
   try{
     for(let i=0;i<teilnehmer.length;i++){
-      const cb=document.getElementById('tn-check-'+i);
+      const cb=document.getElementById('tn-cb-'+i);
       if(!cb||!cb.checked) continue;
       const t=teilnehmer[i];
       const fz=fahrzeuge[t.name];
@@ -2005,7 +2072,7 @@ async function doUebernehme(){
       });
       count++;
       // Fahrzeug übernehmen wenn ausgewählt
-      const fzCb=document.getElementById('fz-check-'+i);
+      const fzCb=document.getElementById('fz-cb-'+i);
       if(fz&&fzCb&&fzCb.checked){
         await sbInsert('fahrzeuge',{
           halter:fz.halter,
